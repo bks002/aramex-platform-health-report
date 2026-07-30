@@ -1,0 +1,23 @@
+Freight & Logistics Region,,,,,,,
+Sr No,Name,Task,Status,Started Date,End Date,Update Date,Remarks
+1,Naveen,IRAQ EDI Integration - Azadea Boomi Process,In Progress,20-Jul-2026,,28-Jul-2026,Updated in Test env; UAT with Azadea scheduled this week
+2,Adrish,Billing Entries CRT - Weatherford,In Progress,14-Jul-2026,,28-Jul-2026,Waiting on Weatherford reply after Navdeep follow-up mail
+3,Priya,Customs Pre-Alert Feed (Jebel Ali),In Progress,18-Jul-2026,,27-Jul-2026,Schema mapping complete; first sample file under validation
+4,Rahul,Ocean Booking Status webhook,Completed,01-Jul-2026,22-Jul-2026,22-Jul-2026,Live in prod; monitoring for 1 week
+5,Sneha,Freight Invoice PDF OCR pipeline,On Hold,10-Jul-2026,,25-Jul-2026,Paused pending vendor OCR license renewal
+,,,,,,,
+GCC Region,,,,,,,
+Sr No,Name,Task,Status,Started Date,End Date,Update Date,Remarks
+1,Imran,KSA E-invoicing ZATCA Phase-2 adapter,In Progress,07-Jul-2026,,28-Jul-2026,Sandbox clearances passing; prod cutover plan under review
+2,Fatima,Dubai Trade API token rotation,Completed,15-Jul-2026,24-Jul-2026,24-Jul-2026,Rotated successfully; runbooks updated
+3,Omar,Bahrain warehouse ASN integration,In Progress,12-Jul-2026,,27-Jul-2026,ASN ACK mapping in QA; partner testing next
+4,Naveen,GCC rate card sync to Boomi,In Progress,21-Jul-2026,,28-Jul-2026,Delta sync tested for 3 lanes; full load pending
+5,Adrish,Kuwait COD settlement report automation,Blocked,09-Jul-2026,,26-Jul-2026,Blocked on bank file layout confirmation
+,,,,,,,
+Express Region,,,,,,,
+Sr No,Name,Task,Status,Started Date,End Date,Update Date,Remarks
+1,Vikram,Last-mile POD photo upload API,In Progress,11-Jul-2026,,28-Jul-2026,Android client integrated; load test at 2k/min in progress
+2,Meera,Express pickup slot optimiser,In Progress,16-Jul-2026,,27-Jul-2026,Pilot live in DXB hub; expanding to AUH next week
+3,Arjun,Customer SMS template localisation (AR/EN),Completed,05-Jul-2026,23-Jul-2026,23-Jul-2026,Templates approved by Comms; rolled out
+4,Lina,Failed delivery reattempt workflow,In Progress,19-Jul-2026,,28-Jul-2026,State machine approved; Boomi process in build
+5,Sameer,Express SLA breach alert to ServiceNow,On Hold,08-Jul-2026,,25-Jul-2026,Waiting for SNOW assignment group IDs from Ops

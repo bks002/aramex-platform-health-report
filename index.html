@@ -1,0 +1,4334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Aramex · Integration Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+<style>
+  /* Material 3 + Aceternity-inspired (vanilla — Google Sites safe) */
+  :root {
+    --arx-red: #DC291E;
+    --arx-red-dark: #B91C14;
+    --arx-red-soft: #FFF1F0;
+    --arx-black: #1D1D1B;
+    --arx-white: #FFFFFF;
+    --arx-grey: #64748B;
+    --arx-mid: #94A3B8;
+    --arx-line: rgba(15, 23, 42, 0.08);
+    --arx-bg: #F8FAFC;
+    --ok: #16A34A;
+    --warn: #CA8A04;
+    --radius: 16px;
+    --radius-sm: 12px;
+    --shadow: 0 1px 2px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.06);
+    --shadow-lg: 0 10px 40px rgba(15,23,42,0.1);
+    --glass: rgba(255,255,255,0.78);
+    --font: "IBM Plex Sans", "Segoe UI", sans-serif;
+    --display: "Space Grotesk", "IBM Plex Sans", sans-serif;
+    --fs-body: 14px;
+    --fs-h1: 1.75rem;
+    --fs-h2: 1.25rem;
+    --fs-metric: 1.05rem;
+    --page-pad-x: 24px;
+    --content-max: none;
+    --card: rgba(255,255,255,0.92);
+    --metric-bg: linear-gradient(180deg, #fff, #F8FAFC);
+    --command-bg: linear-gradient(145deg, #ffffff 0%, #F4F7FB 50%, #EEF2F7 100%);
+    --chart-axis: #E2E8F0;
+    --chart-label: #94A3B8;
+    --tooltip-bg: #1D1D1B;
+    --tooltip-fg: #fff;
+    --success: #16A34A;
+    --failure: #DC291E;
+  }
+  html[data-theme="dark"] {
+    --arx-red: #FF5A4F;
+    --arx-red-dark: #DC291E;
+    --arx-red-soft: rgba(220,41,30,0.18);
+    --arx-black: #F1F5F9;
+    --arx-white: #0F1115;
+    --arx-grey: #94A3B8;
+    --arx-mid: #64748B;
+    --arx-line: rgba(255,255,255,0.1);
+    --arx-bg: #0B0D12;
+    --ok: #4ADE80;
+    --warn: #FBBF24;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 12px 32px rgba(0,0,0,0.35);
+    --shadow-lg: 0 16px 48px rgba(0,0,0,0.45);
+    --glass: rgba(18, 20, 28, 0.82);
+    --card: rgba(22, 25, 34, 0.92);
+    --metric-bg: linear-gradient(180deg, #1A1E28, #141820);
+    --command-bg: linear-gradient(145deg, #151820 0%, #171B24 55%, #1A1F2A 100%);
+    --chart-axis: #2A3140;
+    --chart-label: #94A3B8;
+    --tooltip-bg: #F8FAFC;
+    --tooltip-fg: #0F1115;
+    --success: #4ADE80;
+    --failure: #FF5A4F;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html {
+    font-size: var(--fs-body);
+  }
+  html, body {
+    width: 100%;
+    font-family: var(--font);
+    font-optical-sizing: auto;
+    font-feature-settings: "ss01" 0, "kern" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background:
+      radial-gradient(900px 420px at 0% -5%, rgba(100,116,139,0.12), transparent 55%),
+      radial-gradient(700px 380px at 100% 0%, rgba(148,163,184,0.1), transparent 50%),
+      var(--arx-bg);
+    color: var(--arx-black);
+    line-height: 1.5;
+    letter-spacing: 0.005em;
+    transition: background .25s ease, color .25s ease;
+  }
+  @media (min-resolution: 2dppx) {
+    html, body { -webkit-font-smoothing: antialiased; }
+  }
+  html[data-theme="dark"] body {
+    background:
+      radial-gradient(900px 420px at 0% -5%, rgba(71,85,105,0.25), transparent 55%),
+      radial-gradient(700px 380px at 100% 0%, rgba(51,65,85,0.2), transparent 50%),
+      var(--arx-bg);
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  a { color: inherit; text-decoration: none; }
+
+  /* Full-width report pages (edge-to-edge with side padding) */
+  .shell {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .theme-toggle {
+    width: 42px; height: 42px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(15,23,42,0.05); color: var(--arx-black);
+    font-size: 16px;
+  }
+  html[data-theme="dark"] .theme-toggle { background: rgba(255,255,255,0.08); }
+  .theme-toggle:hover { transform: scale(1.05); }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+    padding: 14px var(--page-pad-x);
+    background: var(--glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--arx-line);
+  }
+  .brand-lock { display: flex; align-items: center; gap: 10px; }
+  .brand-lock .logo {
+    font-family: var(--display);
+    font-size: 1.25rem;
+    font-weight: 700; letter-spacing: -0.04em;
+    text-transform: lowercase; color: var(--arx-red);
+  }
+  .brand-lock .slash { color: var(--arx-mid); font-weight: 300; }
+  .brand-lock .product {
+    font-size: 0.75rem; font-weight: 600; color: var(--arx-grey);
+    letter-spacing: 0.02em;
+  }
+  .live-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700;
+    background: var(--arx-red-soft); color: var(--arx-red);
+    padding: 6px 12px; border-radius: 999px;
+  }
+  .live-chip .pulse {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--arx-red);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(220,41,30,0.45); }
+    70% { box-shadow: 0 0 0 10px rgba(220,41,30,0); }
+    100% { box-shadow: 0 0 0 0 rgba(220,41,30,0); }
+  }
+  .top-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  /* Material-style buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 18px; border-radius: 999px;
+    font-size: 13px; font-weight: 600;
+    border: none;
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+    position: relative; overflow: hidden;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn.ghost {
+    color: var(--arx-black); background: rgba(15,23,42,0.05);
+  }
+  .btn.ghost:hover { background: rgba(15,23,42,0.09); }
+  .btn.solid {
+    background: var(--arx-red); color: #fff;
+    box-shadow: none;
+  }
+  .btn.solid:hover { background: var(--arx-red-dark); box-shadow: none; }
+  .btn.light {
+    background: var(--card); color: var(--arx-black);
+    box-shadow: var(--shadow);
+  }
+  .btn.light:hover { color: var(--arx-red); }
+  .btn.active { background: var(--arx-red); color: #fff; }
+
+  /* Soft command / status header */
+  .command {
+    position: relative;
+    z-index: 30;
+    margin: 16px var(--page-pad-x) 0;
+    padding: 22px 24px;
+    border-radius: 18px;
+    background: var(--command-bg);
+    border: 1px solid var(--arx-line);
+    box-shadow: var(--shadow);
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 16px;
+    align-items: center;
+    overflow: visible;
+  }
+  .command::before {
+    content: "";
+    position: absolute; right: -50px; top: -70px;
+    width: 240px; height: 240px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(100,116,139,0.12), transparent 70%);
+    pointer-events: none;
+  }
+  html[data-theme="dark"] .command::before {
+    background: radial-gradient(circle, rgba(148,163,184,0.1), transparent 70%);
+  }
+  .command h1 {
+    font-family: var(--display);
+    font-size: var(--fs-h1); font-weight: 700; line-height: 1.15;
+    letter-spacing: -0.035em; color: var(--arx-black);
+    background: transparent; position: relative;
+  }
+  .command h1 em {
+    font-style: normal; color: var(--arx-red); font-weight: 700;
+  }
+  .command .sub {
+    margin-top: 6px; font-size: 0.875rem;
+    color: var(--arx-grey); line-height: 1.5;
+    max-width: 520px; background: transparent; position: relative;
+  }
+  .command-stats {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
+    position: relative;
+  }
+  .cstat {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--arx-line);
+    border-radius: var(--radius-sm);
+    padding: 14px 14px;
+    backdrop-filter: blur(8px);
+  }
+  .cstat .lbl {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.6875rem; font-weight: 600; color: var(--arx-grey); letter-spacing: 0.02em;
+  }
+  .cstat .val { font-family: var(--display); font-size: 1.15rem; font-weight: 700; margin-top: 4px; letter-spacing: -0.02em; }
+  .cstat .val.red { color: var(--arx-red); }
+  .info-icon {
+    position: relative;
+    display: inline-grid; place-items: center;
+    width: 14px; height: 14px;
+    border: 1px solid currentColor; border-radius: 50%;
+    font-size: 9px; font-weight: 800; line-height: 1;
+    cursor: help; opacity: .85;
+  }
+  /* Source markup stays hidden; portal tip is fixed on body above all cards */
+  .info-icon .info-tip { display: none !important; }
+  #healthInfoPop {
+    position: fixed !important;
+    z-index: 2147483647 !important;
+    display: none;
+    box-sizing: border-box;
+    width: min(280px, calc(100vw - 24px));
+    padding: 10px 12px;
+    border: 1px solid var(--arx-line);
+    border-radius: var(--radius-sm);
+    background: #FFFFFF;
+    color: #1D1D1B;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.22);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.45;
+    text-align: left;
+    white-space: normal;
+    pointer-events: none;
+  }
+  html[data-theme="dark"] #healthInfoPop {
+    background: #1A1E28;
+    color: #F1F5F9;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+  }
+  #healthInfoPop.is-open { display: block; }
+  #healthInfoPop strong { display: block; margin-bottom: 6px; font-size: 12px; }
+  #healthInfoPop .tip-line { margin-top: 4px; }
+  #healthInfoPop .tip-line.watch { color: var(--warn); }
+  #healthInfoPop .tip-line.issue { color: var(--arx-red); }
+
+  /* Nav + history in one row */
+  .nav-shell {
+    position: relative;
+    z-index: 10;
+    margin: 12px var(--page-pad-x) 0;
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: var(--glass);
+    border: 1px solid var(--arx-line);
+    border-radius: 999px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(10px);
+  }
+  .nav-wrap {
+    display: flex; gap: 4px; overflow-x: auto;
+    flex: 1 1 auto; min-width: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav-wrap::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: 0.8125rem; font-weight: 600;
+    color: var(--arx-grey);
+    border-radius: 999px;
+    transition: background .18s, color .18s, box-shadow .18s;
+    white-space: nowrap;
+  }
+  .nav-tab:hover { color: var(--arx-black); background: rgba(15,23,42,0.04); }
+  .nav-tab.active {
+    color: #fff;
+    background: var(--arx-red);
+    box-shadow: none;
+  }
+  .dot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    vertical-align: middle; flex: 0 0 auto;
+  }
+  .dot.green { background: var(--ok); }
+  .dot.yellow { background: var(--warn); }
+  .dot.red { background: var(--arx-red); }
+  .dot.gray { background: var(--arx-mid); }
+  .dot.live {
+    box-shadow: 0 0 0 0 rgba(100,116,139,0.45);
+    animation: healthPulse 1.6s ease-out infinite;
+  }
+  .dot.live.green { box-shadow: 0 0 0 0 rgba(22,163,74,0.45); }
+  .dot.live.yellow { box-shadow: 0 0 0 0 rgba(202,138,4,0.45); }
+  .dot.live.red { box-shadow: 0 0 0 0 rgba(220,41,30,0.45); }
+  @keyframes healthPulse {
+    0% { box-shadow: 0 0 0 0 currentColor; transform: scale(1); }
+    70% { box-shadow: 0 0 0 8px transparent; transform: scale(1); }
+    100% { box-shadow: 0 0 0 0 transparent; transform: scale(1); }
+  }
+  .dot.live.green { animation-name: healthPulseGreen; }
+  .dot.live.yellow { animation-name: healthPulseYellow; }
+  .dot.live.red { animation-name: healthPulseRed; }
+  .dot.live.gray { animation-name: healthPulseGray; }
+  @keyframes healthPulseGreen {
+    0% { box-shadow: 0 0 0 0 rgba(22,163,74,0.55); }
+    70% { box-shadow: 0 0 0 8px rgba(22,163,74,0); }
+    100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); }
+  }
+  @keyframes healthPulseYellow {
+    0% { box-shadow: 0 0 0 0 rgba(202,138,4,0.55); }
+    70% { box-shadow: 0 0 0 8px rgba(202,138,4,0); }
+    100% { box-shadow: 0 0 0 0 rgba(202,138,4,0); }
+  }
+  @keyframes healthPulseRed {
+    0% { box-shadow: 0 0 0 0 rgba(220,41,30,0.55); }
+    70% { box-shadow: 0 0 0 8px rgba(220,41,30,0); }
+    100% { box-shadow: 0 0 0 0 rgba(220,41,30,0); }
+  }
+  @keyframes healthPulseGray {
+    0% { box-shadow: 0 0 0 0 rgba(100,116,139,0.45); }
+    70% { box-shadow: 0 0 0 8px rgba(100,116,139,0); }
+    100% { box-shadow: 0 0 0 0 rgba(100,116,139,0); }
+  }
+
+  .card.health-green { border-left: 3px solid var(--ok); }
+  .card.health-yellow { border-left: 3px solid var(--warn); }
+  .card.health-red { border-left: 3px solid var(--arx-red); }
+  .card.health-gray { border-left: 3px solid var(--arx-mid); }
+
+  .nav-history {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end;
+    gap: 8px;
+    flex: 0 1 auto;
+  }
+  .period-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--arx-red);
+  }
+  .period-hint {
+    font-size: 11px; color: var(--arx-grey);
+    max-width: 220px;
+    text-align: right;
+    line-height: 1.35;
+  }
+  .seg {
+    display: inline-flex; background: rgba(15,23,42,0.05);
+    border-radius: 999px; padding: 3px; gap: 2px;
+  }
+  html[data-theme="dark"] .seg { background: rgba(255,255,255,0.06); }
+  .seg button {
+    padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--arx-grey);
+    border-radius: 999px; white-space: nowrap;
+  }
+  .seg button.active {
+    background: var(--card); color: var(--arx-black);
+    box-shadow: 0 1px 3px rgba(15,23,42,0.1);
+  }
+  select.period-select {
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    padding: 8px 12px; border: 1px solid var(--arx-line); border-radius: 999px;
+    background: var(--card); color: var(--arx-black); min-width: 140px; max-width: 200px;
+    outline: none;
+  }
+  select.period-select:focus { border-color: rgba(220,41,30,0.45); box-shadow: 0 0 0 3px rgba(220,41,30,0.12); }
+
+  .page { padding: 16px var(--page-pad-x) 24px; display: none; }
+  .page.active { display: block; animation: fadein .3s ease; }
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .section-head {
+    display: flex; justify-content: space-between; align-items: end; gap: 12px;
+    margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .label {
+    font-size: 0.6875rem; font-weight: 700;
+    color: var(--arx-red); margin-bottom: 4px;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .title {
+    font-family: var(--display); font-size: var(--fs-h2); font-weight: 700; letter-spacing: -0.02em;
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--arx-line);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(8px);
+  }
+  .card.clickable {
+    cursor: pointer;
+    transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+  }
+  .card.clickable:hover {
+    transform: translateY(-4px);
+    border-color: rgba(220,41,30,0.25);
+    box-shadow: var(--shadow-lg);
+  }
+  .card h3 {
+    font-size: 15px; font-weight: 700; margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .card .cta {
+    font-size: 12px; font-weight: 700; color: var(--arx-red);
+  }
+
+  .metric-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .metric-row.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .metric {
+    background: var(--metric-bg);
+    border: 1px solid var(--arx-line);
+    border-radius: var(--radius-sm); padding: 12px;
+  }
+  .metric .n { font-family: var(--display); font-size: var(--fs-metric); font-weight: 700; letter-spacing: -0.03em; }
+  .metric .l { font-size: 0.75rem; color: var(--arx-grey); font-weight: 600; margin-top: 3px; }
+
+  .risk { font-size: 13px; color: var(--arx-red); line-height: 1.45; }
+  .ok-text { font-size: 13px; color: var(--arx-grey); }
+
+  .chart-box { min-height: 180px; position: relative; }
+  .chart-svg { width: 100%; height: 220px; display: block; cursor: crosshair; }
+  .chart-js-wrap { position: relative; width: 100%; min-height: 72px; }
+  .chart-js-wrap canvas { width: 100% !important; height: 100% !important; }
+  .heartbeat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .heartbeat-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 320px;
+    background: var(--card);
+    border: 1px solid var(--arx-line);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+  .heartbeat-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 12px;
+  }
+  .heartbeat-name {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-family: var(--display); font-size: 15px; font-weight: 700;
+  }
+  .heartbeat-time { font-size: 11px; font-weight: 700; color: var(--arx-grey); }
+  .ecg {
+    position: relative;
+    height: 82px;
+    margin: 4px -4px 14px;
+    overflow: hidden;
+    border-radius: 10px;
+    background:
+      linear-gradient(var(--arx-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--arx-line) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .ecg svg { width: 100%; height: 100%; display: block; }
+  .ecg-path {
+    fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+    stroke-dasharray: 900; stroke-dashoffset: 900;
+    animation: ecgDraw 2.8s linear infinite;
+  }
+  .ecg-glow { fill: none; stroke-width: 7; opacity: .12; filter: blur(3px); }
+  .ecg-sweep {
+    position: absolute; top: 0; bottom: 0; width: 50px; left: -50px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+    animation: ecgSweep 2.8s linear infinite;
+  }
+  @keyframes ecgDraw {
+    0% { stroke-dashoffset: 900; opacity: .4; }
+    15% { opacity: 1; }
+    85% { stroke-dashoffset: 0; opacity: 1; }
+    100% { stroke-dashoffset: -120; opacity: .35; }
+  }
+  @keyframes ecgSweep { to { left: calc(100% + 50px); } }
+  .live-lines {
+    position: relative; height: 190px; margin: 2px 0 12px;
+    overflow: hidden; border-radius: 10px;
+    background:
+      linear-gradient(var(--arx-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--arx-line) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .live-lines .chart-js-wrap { z-index: 1; }
+  .live-lines::after {
+    content: ""; position: absolute; z-index: 2; pointer-events: none;
+    top: 0; bottom: 0; width: 56px; left: -56px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent);
+    animation: stockSweep 3.2s linear infinite;
+  }
+  @keyframes stockSweep { to { left: calc(100% + 56px); } }
+  .line-stats {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;
+  }
+  .snapshot-context {
+    margin: -2px 0 8px;
+    color: var(--arx-grey); font-size: 10px; font-weight: 700;
+  }
+  .line-stat {
+    min-width: 0; padding: 9px 10px;
+    background: var(--metric-bg); border: 1px solid var(--arx-line);
+    border-radius: var(--radius-sm);
+  }
+  .line-stat .name {
+    display: flex; align-items: center; gap: 5px;
+    color: var(--arx-grey); font-size: 9px; font-weight: 700;
+    white-space: nowrap;
+  }
+  .line-stat .name i { width: 12px; height: 2px; border-radius: 2px; flex: 0 0 auto; }
+  .line-stat strong {
+    display: block; margin-top: 5px; overflow: hidden; text-overflow: ellipsis;
+    font-family: var(--display); font-size: .9rem; white-space: nowrap;
+  }
+  .heartbeat-metrics {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+  }
+  .heartbeat-metric {
+    min-width: 0; padding: 10px;
+    background: var(--metric-bg); border: 1px solid var(--arx-line);
+    border-radius: var(--radius-sm);
+  }
+  .heartbeat-metric strong {
+    display: block; overflow: hidden; text-overflow: ellipsis;
+    font-family: var(--display); font-size: .95rem; white-space: nowrap;
+  }
+  .heartbeat-metric span { display: block; margin-top: 3px; color: var(--arx-grey); font-size: 10px; font-weight: 600; }
+  .heartbeat-empty { display: grid; place-items: center; height: 170px; color: var(--arx-grey); font-size: 13px; }
+  .chart-tooltip {
+    position: absolute; z-index: 5; pointer-events: none;
+    background: var(--tooltip-bg); color: var(--tooltip-fg);
+    border-radius: 12px; padding: 10px 12px; font-size: 12px;
+    box-shadow: var(--shadow-lg); min-width: 140px;
+    opacity: 0; transform: translateY(4px); transition: opacity .12s ease;
+  }
+  .chart-tooltip.show { opacity: 1; transform: none; }
+  .chart-tooltip .tt-week { font-weight: 700; margin-bottom: 6px; font-size: 12px; }
+  .chart-tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; margin-top: 3px; }
+  .chart-tooltip .tt-name { display: inline-flex; align-items: center; gap: 6px; color: var(--arx-mid); }
+  html[data-theme="dark"] .chart-tooltip .tt-name { color: #64748B; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .legend button {
+    font-size: 12px; color: var(--arx-grey); display: inline-flex; align-items: center; gap: 6px;
+    font-weight: 600; padding: 6px 10px; border-radius: 999px;
+    background: rgba(15,23,42,0.04); border: 1px solid transparent;
+    transition: opacity .15s, background .15s;
+  }
+  html[data-theme="dark"] .legend button { background: rgba(255,255,255,0.06); }
+  .legend button.off { opacity: 0.35; text-decoration: line-through; }
+  .legend button:hover { border-color: var(--arx-line); }
+  .swatch { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+
+  .spark { width: 100%; height: 44px; display: block; }
+
+  /* Platform comparison cards */
+  .compare-banner {
+    margin-bottom: 12px; padding: 14px 16px;
+    background: var(--metric-bg); border: 1px solid var(--arx-line);
+    border-radius: var(--radius);
+  }
+  .compare-banner .compare-title {
+    font-family: var(--display); font-size: 14px; font-weight: 700;
+  }
+  .compare-banner .compare-sub {
+    margin-top: 4px; font-size: 12px; color: var(--arx-grey); font-weight: 600;
+  }
+  .compare-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+  }
+  .hist-panel { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+  .hist-snapshot {
+    background: var(--card); border: 1px solid var(--arx-line);
+    border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
+  }
+  .hist-snapshot h3 { margin-bottom: 10px; }
+  .hist-metrics {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;
+  }
+  .hist-metrics .metric { padding: 10px 12px; }
+  .hist-metrics .metric .n { font-size: 1rem; }
+  .hist-sev {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+    margin-top: 10px;
+  }
+  .hist-delta-row {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+  }
+  .hist-delta-card {
+    background: var(--metric-bg); border: 1px solid var(--arx-line);
+    border-radius: var(--radius-sm); padding: 12px;
+  }
+  .hist-delta-card .lbl { font-size: 11px; font-weight: 700; color: var(--arx-grey); }
+  .hist-delta-card .val { margin-top: 4px; font-size: 15px; font-weight: 700; }
+  .hist-delta-card .vs { margin-top: 4px; font-size: 11px; color: var(--arx-grey); font-weight: 600; }
+  .hist-weeks-card {
+    background: var(--card); border: 1px solid var(--arx-line);
+    border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
+  }
+  .hist-weeks-card h3 { margin-bottom: 8px; }
+  @media (max-width: 900px) {
+    .hist-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .hist-delta-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 640px) {
+    .hist-metrics, .hist-sev, .hist-delta-row { grid-template-columns: 1fr 1fr; }
+  }
+  .compare-card {
+    background: var(--card); border: 1px solid var(--arx-line);
+    border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 6px; min-height: 220px;
+  }
+  .compare-card-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .compare-label { font-size: 12px; font-weight: 700; color: var(--arx-grey); }
+  .compare-delta {
+    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .compare-delta.up { background: rgba(22,163,74,.12); color: var(--ok); }
+  .compare-delta.down { background: rgba(220,41,30,.1); color: var(--arx-red); }
+  .compare-delta.flat { background: rgba(100,116,139,.12); color: var(--arx-grey); }
+  .compare-delta.na { background: rgba(100,116,139,.08); color: var(--arx-grey); }
+  .compare-delta.down.good { background: rgba(22,163,74,.12); color: var(--ok); }
+  .compare-delta.up.bad { background: rgba(220,41,30,.1); color: var(--arx-red); }
+  .compare-current {
+    font-family: var(--display); font-size: 1.35rem; font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+  .compare-prev { font-size: 12px; color: var(--arx-grey); font-weight: 600; }
+  .compare-target {
+    display: inline-flex; align-items: center; width: fit-content;
+    margin-top: 2px; padding: 3px 7px; border-radius: 999px;
+    background: var(--metric-bg); border: 1px solid var(--arx-line);
+    color: var(--arx-grey); font-size: 10px; font-weight: 700;
+  }
+  .compare-spark { margin-top: auto; padding-top: 4px; }
+  .compare-spark .chart-js-wrap { min-height: 100px; }
+  .current-only-card {
+    margin-top: 12px; padding: 14px 16px;
+    background: var(--card); border: 1px dashed var(--arx-line);
+    border-radius: var(--radius);
+  }
+  .current-only-card .tag {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    color: var(--arx-grey); text-transform: uppercase; letter-spacing: .04em;
+    margin-bottom: 8px;
+  }
+  .current-only-card .n {
+    font-family: var(--display); font-size: 1.35rem; font-weight: 700;
+  }
+  .current-only-card .l { font-size: 12px; color: var(--arx-grey); margin-top: 4px; font-weight: 600; }
+  .daily-focus { padding: 18px; }
+  .daily-focus-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .daily-focus-head h3 { margin: 0 0 4px; }
+  .daily-summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px; margin-bottom: 14px;
+  }
+  .daily-summary .metric { padding: 10px 12px; }
+  .daily-summary .metric .n { font-size: 1rem; }
+  .daily-chart-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; margin-top: 4px;
+  }
+  .daily-chart-panel {
+    min-width: 0; padding: 12px;
+    background: var(--metric-bg); border: 1px solid var(--arx-line);
+    border-radius: var(--radius-sm);
+  }
+  .daily-chart-panel h4 {
+    display: flex; justify-content: space-between; gap: 8px;
+    margin-bottom: 6px; font-size: 12px;
+  }
+  .daily-chart-panel h4 span { color: var(--arx-grey); font-size: 10px; }
+  .daily-legend {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;
+    color: var(--arx-grey); font-size: 11px; font-weight: 700;
+  }
+  .daily-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .daily-legend i { width: 12px; height: 4px; border-radius: 4px; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .kpi-tile {
+    background: var(--card); border: 1px solid var(--arx-line);
+    border-radius: var(--radius-sm); padding: 12px;
+  }
+  .kpi-tile .name { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .badge {
+    font-size: 10px; font-weight: 700;
+    padding: 3px 8px; border-radius: 999px; display: inline-block;
+  }
+  .badge.met { background: rgba(22,163,74,.12); color: var(--ok); }
+  .badge.miss { background: rgba(220,41,30,.1); color: var(--arx-red); }
+  .badge.watch { background: rgba(202,138,4,.14); color: #A16207; }
+  .badge.na { background: #F1F5F9; color: var(--arx-grey); }
+  .badge.progress { background: rgba(37,99,235,.12); color: #1D4ED8; }
+  .badge.blocked { background: rgba(220,41,30,.1); color: var(--arx-red); }
+  .badge.hold { background: rgba(100,116,139,.14); color: #475569; }
+  .badge.done { background: rgba(22,163,74,.12); color: var(--ok); }
+
+  .bu-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .bu-region-card {
+    background: var(--card); border: 1px solid var(--arx-line);
+    border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
+    margin-bottom: 12px;
+  }
+  .bu-region-card h3 {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .bu-region-card .count {
+    font-size: 11px; font-weight: 700; color: var(--arx-grey);
+    background: var(--metric-bg); border: 1px solid var(--arx-line);
+    padding: 3px 8px; border-radius: 999px;
+  }
+  .bu-region-card table.data td {
+    white-space: normal; vertical-align: top;
+    font-size: 12px; line-height: 1.4;
+  }
+  .bu-region-card table.data td.task { font-weight: 600; min-width: 180px; }
+  .bu-region-card table.data td.remarks { color: var(--arx-grey); min-width: 220px; }
+  .bu-filter {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center;
+  }
+  .bu-filter .seg button.active { background: var(--arx-black); color: #fff; }
+  @media (max-width: 900px) {
+    .bu-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  .kpi-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--arx-grey); }
+  .kpi-meta strong { color: var(--arx-black); font-size: 13px; }
+  .kpi-compare {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px; margin-top: 9px;
+  }
+  .kpi-compare > div {
+    min-width: 0; padding: 8px 9px; border-radius: var(--radius-sm);
+    background: var(--metric-bg); border: 1px solid var(--arx-line);
+  }
+  .kpi-compare .lbl {
+    display: block; margin-bottom: 3px;
+    color: var(--arx-grey); font-size: 9px; font-weight: 700; text-transform: uppercase;
+  }
+  .kpi-compare strong { display: block; font-size: 12px; line-height: 1.25; }
+  .kpi-compare .met { color: var(--ok); }
+  .kpi-compare .watch { color: #A16207; }
+  .kpi-compare .miss { color: var(--arx-red); }
+  .kpi-desc {
+    font-size: 12px; color: var(--arx-grey); line-height: 1.5;
+    white-space: pre-wrap; margin: 6px 0 8px;
+  }
+  details.mini { margin-top: 8px; }
+  details.mini summary { font-size: 12px; font-weight: 700; color: var(--arx-red); cursor: pointer; list-style: none; }
+  details.mini summary::-webkit-details-marker { display: none; }
+  details.mini .body { font-size: 12px; color: #475569; white-space: pre-wrap; margin-top: 6px; line-height: 1.5; }
+
+  .table-wrap { overflow-x: auto; }
+  table.data { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+  table.data th {
+    text-align: left; font-size: 11px; font-weight: 700;
+    color: var(--arx-grey); padding: 10px 8px; border-bottom: 1px solid var(--arx-line);
+  }
+  table.data td {
+    padding: 12px 8px; border-bottom: 1px solid var(--arx-line); white-space: nowrap;
+  }
+  table.data tr.clickable-row { cursor: pointer; transition: background .15s; }
+  table.data tr.clickable-row:hover td { background: var(--arx-red-soft); }
+  table.data tr.selected td { background: var(--arx-red-soft); font-weight: 700; color: var(--arx-red-dark); }
+
+  .member-row {
+    display: grid; grid-template-columns: 1.6fr repeat(3,.7fr);
+    gap: 8px; align-items: center;
+    background: var(--card); border: 1px solid var(--arx-line);
+    border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; margin-bottom: 8px;
+  }
+  .member-row.header {
+    background: transparent; border: none; padding: 0 14px 6px;
+    font-size: 11px; font-weight: 700; color: var(--arx-grey);
+  }
+  .member-row .val { text-align: center; }
+  .member-row.total {
+    background: var(--arx-red-soft); border-color: rgba(220,41,30,.2); font-weight: 700;
+  }
+
+  .loader {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; padding: 48px 20px; color: var(--arx-grey); font-size: 14px; font-weight: 500;
+  }
+  .spinner {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 3px solid #FEE2E2; border-top-color: var(--arx-red);
+    animation: spin .75s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .skeleton {
+    background: linear-gradient(90deg, #EEF2F7 25%, #fff 37%, #EEF2F7 63%);
+    background-size: 400% 100%; animation: shimmer 1.2s ease infinite;
+    border-radius: 10px; height: 14px; margin-bottom: 8px;
+  }
+  @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+  .status-line { font-size: 12px; color: var(--arx-grey); margin-top: 14px; }
+  .banner {
+    display: none; padding: 12px 18px; font-size: 13px; font-weight: 600; text-align: center;
+  }
+  .banner.show { display: block; }
+  .banner.error { background: #FEF2F2; color: #991B1B; }
+  .banner.info { background: #FFFBEB; color: #92400E; }
+
+  .empty { padding: 32px; text-align: center; color: var(--arx-grey); font-size: 14px; }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; position: relative; }
+  .pill {
+    font-size: 0.8125rem; font-weight: 600; padding: 8px 12px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--arx-line); color: var(--arx-black);
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+    transition: transform .15s, border-color .15s, color .15s;
+  }
+  .pill:hover { border-color: rgba(220,41,30,0.35); color: var(--arx-red); transform: translateY(-1px); }
+
+  .footer-note {
+    text-align: center; padding: 8px var(--page-pad-x) 24px; font-size: 0.8125rem; color: var(--arx-grey);
+  }
+
+  /* Keep density tight; only crisp-up on true 4K */
+  @media (min-width: 2560px) {
+    :root {
+      --fs-body: 15px;
+      --page-pad-x: 32px;
+    }
+  }
+
+  @media (max-width: 1100px) {
+    .period-hint { display: none; }
+  }
+  @media (max-width: 960px) {
+    .command, .grid-2 { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .heartbeat-grid { grid-template-columns: 1fr; }
+    .command { margin-top: 14px; padding: 18px; }
+    .topbar { padding: 12px 14px; }
+    .brand-lock .product { display: none; }
+  }
+  @media (max-width: 720px) {
+    .nav-shell {
+      flex-direction: column;
+      align-items: stretch;
+      border-radius: 18px;
+      gap: 10px;
+    }
+    .nav-wrap {
+      width: 100%;
+      padding-bottom: 2px;
+    }
+    .nav-history {
+      width: 100%;
+      justify-content: flex-start;
+      padding-top: 8px;
+      border-top: 1px solid var(--arx-line);
+    }
+    .period-hint {
+      display: block;
+      max-width: none;
+      text-align: left;
+      flex: 1 1 100%;
+    }
+    select.period-select {
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: none;
+    }
+  }
+  @media (max-width: 640px) {
+    .grid-4, .grid-3, .kpi-grid, .compare-grid { grid-template-columns: 1fr; }
+    .daily-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .daily-chart-grid { grid-template-columns: 1fr; }
+    .command-stats { grid-template-columns: 1fr 1fr; }
+    .command h1 { font-size: 22px; }
+    .command { padding: 18px; }
+    .command .sub { font-size: 13px; }
+    .top-actions .btn.ghost { display: none; }
+    .top-actions .btn.solid { padding: 9px 14px; font-size: 12px; }
+    .section-head { align-items: flex-start; }
+    .section-head .title { font-size: 18px; }
+    .member-row {
+      grid-template-columns: 1fr;
+      text-align: left;
+      gap: 4px;
+    }
+    .member-row .val { text-align: left; }
+    .member-row.header { display: none; }
+    .member-row > div:not(:first-child)::before {
+      content: attr(data-label);
+      font-size: 10px;
+      color: var(--arx-grey);
+      font-weight: 700;
+      margin-right: 6px;
+    }
+    .chart-svg { height: 180px; }
+    .legend button { font-size: 11px; padding: 5px 8px; }
+    .btn { padding: 9px 14px; }
+    .cstat .val { font-size: 16px; }
+  }
+  @media (max-width: 420px) {
+    .command-stats { grid-template-columns: 1fr; }
+    .metric-row { grid-template-columns: 1fr; }
+    .heartbeat-metrics { grid-template-columns: 1fr 1fr; }
+    .line-stats { grid-template-columns: 1fr 1fr; }
+    .brand-lock .slash, .live-chip { display: none; }
+    .seg button { padding: 7px 10px; font-size: 11px; }
+  }
+
+  /* Unveil splash (compact card; still shows every load / refresh) */
+  .unveil {
+    position: fixed; inset: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    background: #0F1115;
+    color: #fff;
+    overflow: hidden;
+    transition: opacity .55s ease, visibility .55s ease;
+  }
+  .unveil.hide {
+    opacity: 0; visibility: hidden; pointer-events: none;
+  }
+  .unveil::before {
+    content: "";
+    position: absolute; inset: -20%;
+    background:
+      radial-gradient(circle at 30% 40%, rgba(220,41,30,0.28), transparent 45%),
+      radial-gradient(circle at 75% 60%, rgba(100,116,139,0.2), transparent 40%);
+    animation: unveilGlow 2.4s ease-in-out infinite alternate;
+  }
+  @keyframes unveilGlow {
+    from { transform: scale(1); opacity: 0.85; }
+    to { transform: scale(1.08); opacity: 1; }
+  }
+  .unveil-card {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 28px 32px;
+    max-width: 420px;
+    animation: unveilIn .7s ease both;
+  }
+  @keyframes unveilIn {
+    from { opacity: 0; transform: translateY(18px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  .unveil-brand {
+    font-family: var(--display);
+    font-size: 1.75rem; font-weight: 700;
+    letter-spacing: -0.04em;
+    text-transform: lowercase;
+    color: #FF5A4F;
+    margin-bottom: 10px;
+  }
+  .unveil-title {
+    font-family: var(--display);
+    font-size: 1.35rem; font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .unveil-by {
+    font-size: 0.8125rem;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+  .unveil-by strong {
+    color: #fff; font-weight: 600;
+  }
+  .unveil-team {
+    display: block;
+    margin-top: 6px;
+    color: rgba(255,255,255,0.9);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .unveil-bar {
+    width: 140px; height: 3px; margin: 0 auto 18px;
+    border-radius: 999px; overflow: hidden;
+    background: rgba(255,255,255,0.12);
+  }
+  .unveil-bar > i {
+    display: block; height: 100%; width: 0;
+    background: #DC291E;
+    animation: unveilLoad 1.8s ease forwards;
+  }
+  @keyframes unveilLoad {
+    to { width: 100%; }
+  }
+  .unveil-skip {
+    font-size: 0.75rem; font-weight: 600;
+    color: rgba(255,255,255,0.55);
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .unveil-skip:hover { color: #fff; border-color: rgba(255,255,255,0.35); }
+</style>
+</head>
+<body>
+
+<div class="unveil" id="unveil" role="dialog" aria-label="Welcome">
+  <div class="unveil-card">
+    <div class="unveil-brand">aramex</div>
+    <div class="unveil-title">Integration Control</div>
+    <p class="unveil-by">Platform health report<br/>Published by <strong>Annual Maintenance Support</strong><span class="unveil-team">ALL D&amp;T - Global - Integration Team</span></p>
+    <div class="unveil-bar"><i></i></div>
+    <button type="button" class="unveil-skip" id="unveilSkip">Enter report</button>
+  </div>
+</div>
+
+<div id="banner" class="banner"></div>
+
+<div class="shell">
+<header class="topbar">
+  <div class="brand-lock">
+    <div class="logo">aramex</div>
+    <div class="slash">/</div>
+    <div class="product">Integration Control</div>
+    <div class="live-chip"><span class="pulse"></span> Live</div>
+  </div>
+  <div class="top-actions">
+    <button class="theme-toggle" id="btnTheme" type="button" title="Toggle theme" aria-label="Toggle light and dark theme">◐</button>
+    <button class="btn ghost" id="btnRefresh" type="button">Refresh</button>
+    <button class="btn solid" id="btnLatest" type="button">Latest week</button>
+  </div>
+</header>
+
+<section class="command">
+  <div>
+    <h1 id="commandTitle">Integration <em>status</em></h1>
+    <p class="sub" id="commandSub">Live platform health, volumes, and ServiceNow tickets from the published tracker.</p>
+  </div>
+  <div class="command-stats" id="commandStats">
+    <div class="cstat"><div class="lbl">Period</div><div class="val">—</div></div>
+    <div class="cstat"><div class="lbl">Healthy Platforms</div><div class="val">—</div></div>
+    <div class="cstat"><div class="lbl">Total tickets</div><div class="val red">—</div></div>
+  </div>
+</section>
+
+<div class="nav-shell">
+  <nav class="nav-wrap" id="mainNav" aria-label="Platforms">
+    <button class="nav-tab active" data-view="home" type="button">Home</button>
+    <button class="nav-tab" data-view="infolink" type="button">Infolink</button>
+    <button class="nav-tab" data-view="boomi" type="button">Boomi</button>
+    <button class="nav-tab" data-view="shipping" type="button">Shipping API</button>
+    <button class="nav-tab" data-view="cpi" type="button">CPI</button>
+    <button class="nav-tab" data-view="tickets" type="button">Tickets</button>
+    <button class="nav-tab" data-view="bu" type="button">Regional tasks</button>
+  </nav>
+  <div class="nav-history" aria-label="History">
+    <span class="period-label">History</span>
+    <div class="seg" id="modeSeg">
+      <button type="button" data-mode="week" class="active">Week</button>
+      <button type="button" data-mode="month">Month</button>
+    </div>
+    <select class="period-select" id="periodSelect" aria-label="Select period"></select>
+  </div>
+</div>
+
+<main>
+  <section class="page active" id="view-home">
+    <div class="section-head">
+      <div>
+        <div class="label">Summary</div>
+        <div class="title">Platform snapshot</div>
+      </div>
+      <button class="btn light" type="button" id="btnOpenTickets">Open tickets →</button>
+    </div>
+    <div id="homePlatforms" class="grid-4"><div class="loader"><div class="spinner"></div>Loading platforms…</div></div>
+
+    <div class="section-head" style="margin-top:20px;">
+      <div>
+        <div class="label">Live operations</div>
+        <div class="title">Live hourly performance · Messages processed</div>
+      </div>
+      <div class="live-chip" id="hourlyLiveChip"><span class="pulse"></span> Loading live hour</div>
+    </div>
+    <div id="homeHourly"><div class="loader"><div class="spinner"></div>Loading hourly sheet…</div></div>
+    <div class="status-line" id="homeStatus"></div>
+  </section>
+
+  <section class="page" id="view-platform">
+    <div class="section-head">
+      <div>
+        <div class="label" id="platLabel">Platform</div>
+        <div class="title" id="platTitle">—</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn light" type="button" data-jump="home">← Home</button>
+        <button class="btn solid" type="button" id="btnPrevWeek">◀ Prev week</button>
+        <button class="btn solid" type="button" id="btnNextWeek">Next week ▶</button>
+      </div>
+    </div>
+    <div class="card daily-focus" style="margin-bottom:12px;display:none;" id="platDaily"></div>
+    <div class="card compare-banner" id="platCompareBanner" style="display:none;"></div>
+    <div id="platHistory" style="display:none;"></div>
+    <div class="compare-grid" id="platComparison" style="display:none;"></div>
+    <div id="platIntegrations" style="display:none;"></div>
+    <div class="grid-3" id="platMetrics"></div>
+    <div class="grid-2" style="margin-top:12px;" id="platCurrentOnly">
+      <div class="card">
+        <h3>KPIs <span class="cta">Current · KPI sheet</span></h3>
+        <div class="kpi-grid" id="platKpis"><div class="empty">No KPI rows</div></div>
+      </div>
+      <div class="card" id="platNarrative"></div>
+    </div>
+    <div class="status-line" id="platStatus"></div>
+  </section>
+
+  <section class="page" id="view-bu">
+    <div class="section-head">
+      <div>
+        <div class="label">Business units</div>
+        <div class="title">Regional task updates</div>
+      </div>
+      <button class="btn light" type="button" data-jump="home">← Home</button>
+    </div>
+    <div class="bu-stats" id="buStats"></div>
+    <div class="bu-filter" id="buFilter"></div>
+    <div id="buRegions"><div class="loader"><div class="spinner"></div>Loading BU updates…</div></div>
+    <div class="status-line" id="buStatus"></div>
+  </section>
+
+  <section class="page" id="view-tickets">
+    <div class="section-head">
+      <div>
+        <div class="label">ServiceNow</div>
+        <div class="title">Ticket desk</div>
+      </div>
+      <button class="btn light" type="button" data-jump="home">← Home</button>
+    </div>
+    <div class="grid-4" id="ticketStats"></div>
+    <div class="card" style="margin-top:12px;">
+      <h3>Team breakdown</h3>
+      <div id="ticketMembers"></div>
+    </div>
+    <div class="status-line" id="ticketStatus"></div>
+  </section>
+</main>
+
+<p class="footer-note">Published by Annual Maintenance Support · ALL D&amp;T - Global - Integration Team</p>
+</div>
+
+<script type="text/csv" id="buEmbeddedCsv">Freight & Logistics Region,,,,,,,
+Sr No,Name,Task,Status,Started Date,End Date,Update Date,Remarks
+1,Naveen,IRAQ EDI Integration - Azadea Boomi Process,In Progress,20-Jul-2026,,28-Jul-2026,Updated in Test env; UAT with Azadea scheduled this week
+2,Adrish,Billing Entries CRT - Weatherford,In Progress,14-Jul-2026,,28-Jul-2026,Waiting on Weatherford reply after Navdeep follow-up mail
+3,Priya,Customs Pre-Alert Feed (Jebel Ali),In Progress,18-Jul-2026,,27-Jul-2026,Schema mapping complete; first sample file under validation
+4,Rahul,Ocean Booking Status webhook,Completed,01-Jul-2026,22-Jul-2026,22-Jul-2026,Live in prod; monitoring for 1 week
+5,Sneha,Freight Invoice PDF OCR pipeline,On Hold,10-Jul-2026,,25-Jul-2026,Paused pending vendor OCR license renewal
+,,,,,,,
+GCC Region,,,,,,,
+Sr No,Name,Task,Status,Started Date,End Date,Update Date,Remarks
+1,Imran,KSA E-invoicing ZATCA Phase-2 adapter,In Progress,07-Jul-2026,,28-Jul-2026,Sandbox clearances passing; prod cutover plan under review
+2,Fatima,Dubai Trade API token rotation,Completed,15-Jul-2026,24-Jul-2026,24-Jul-2026,Rotated successfully; runbooks updated
+3,Omar,Bahrain warehouse ASN integration,In Progress,12-Jul-2026,,27-Jul-2026,ASN ACK mapping in QA; partner testing next
+4,Naveen,GCC rate card sync to Boomi,In Progress,21-Jul-2026,,28-Jul-2026,Delta sync tested for 3 lanes; full load pending
+5,Adrish,Kuwait COD settlement report automation,Blocked,09-Jul-2026,,26-Jul-2026,Blocked on bank file layout confirmation
+,,,,,,,
+Express Region,,,,,,,
+Sr No,Name,Task,Status,Started Date,End Date,Update Date,Remarks
+1,Vikram,Last-mile POD photo upload API,In Progress,11-Jul-2026,,28-Jul-2026,Android client integrated; load test at 2k/min in progress
+2,Meera,Express pickup slot optimiser,In Progress,16-Jul-2026,,27-Jul-2026,Pilot live in DXB hub; expanding to AUH next week
+3,Arjun,Customer SMS template localisation (AR/EN),Completed,05-Jul-2026,23-Jul-2026,23-Jul-2026,Templates approved by Comms; rolled out
+4,Lina,Failed delivery reattempt workflow,In Progress,19-Jul-2026,,28-Jul-2026,State machine approved; Boomi process in build
+5,Sameer,Express SLA breach alert to ServiceNow,On Hold,08-Jul-2026,,25-Jul-2026,Waiting for SNOW assignment group IDs from Ops
+</script>
+
+<script>
+(function () {
+  var BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR5oAe8Hi5b8HL_Ldgh7LbErI_Ye1HhYrVN7CikI2v28chsrfW0OTphx3CCzmNgpcOnD5WI4m4bUyj0/pub";
+  var AMP = String.fromCharCode(38);
+
+  var PLATFORMS = [
+    { id: "infolink", name: "Infolink", color: "#DC291E" },
+    { id: "boomi", name: "Boomi", color: "#3B82F6" },
+    { id: "shipping", name: "Shipping API", color: "#0D9488", aliases: ["shipping api"] },
+    { id: "cpi", name: "CPI", color: "#8B5CF6", aliases: ["sap cpi"] }
+  ];
+
+  var GID = {
+    exec: 2088466211,          // Summary of Insights
+    dailyDash: 1577232017,     // Daily Performance Dashboard (week totals)
+    data: 1790375870,          // Data tab — day-wise rows for current week
+    wow: 1348888415,           // Week Over Week Summary
+    kpis: 1984520310,
+    tickets: 54157217,
+    hourly: 330696070,
+    monthlyMsgs: 1147599805,   // Monthly Message Processed
+    buRegions: null            // paste sheet + publish, then set GID here
+  };
+
+  var state = {
+    loading: true,
+    view: "home",
+    mode: "week",
+    selectedWeekId: null,
+    selectedMonth: null,
+    exec: null,
+    weeks: [],
+    months: [],
+    daily: null,
+    hourly: null,
+    hourlySource: "",
+    monthly: null,
+    kpis: [],
+    tickets: null,
+    bu: null,
+    buRegionFilter: "all",
+    error: null,
+    chartHidden: {},
+    lastSeries: null
+  };
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function csvUrl(gid) {
+    return BASE + "?gid=" + gid + AMP + "single=true" + AMP + "output=csv";
+  }
+
+  function parseCSV(text) {
+    var rows = [], row = [], field = "", inQ = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i], n = text[i + 1];
+      if (inQ) {
+        if (c === '"' && n === '"') { field += '"'; i++; }
+        else if (c === '"') inQ = false;
+        else field += c;
+      } else if (c === '"') inQ = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && n === "\n") i++;
+        row.push(field);
+        if (row.some(function (x) { return String(x).trim(); })) rows.push(row);
+        row = []; field = "";
+      } else field += c;
+    }
+    if (field || row.length) {
+      row.push(field);
+      if (row.some(function (x) { return String(x).trim(); })) rows.push(row);
+    }
+    return rows;
+  }
+
+  function firstNumber(text) {
+    var m = String(text || "").replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+    return m ? parseFloat(m[0]) : null;
+  }
+
+  function matchPlatform(item) {
+    var s = String(item || "").toLowerCase();
+    for (var i = 0; i < PLATFORMS.length; i++) {
+      var p = PLATFORMS[i];
+      var names = [p.name.toLowerCase()].concat(p.aliases || []);
+      for (var j = 0; j < names.length; j++) {
+        if (s.indexOf(names[j]) >= 0) return p.id;
+      }
+    }
+    return null;
+  }
+
+  function healthClass(token) {
+    var t = String(token || "");
+    if (/🟢|\uD83D\uDFE2|green/i.test(t)) return "green";
+    if (/🟡|\uD83D\uDFE1|yellow|amber/i.test(t)) return "yellow";
+    if (/🔴|\uD83D\uDD34|red/i.test(t)) return "red";
+    return "gray";
+  }
+
+  function healthRank(cls) {
+    if (cls === "red") return 3;
+    if (cls === "yellow") return 2;
+    if (cls === "green") return 1;
+    return 0;
+  }
+
+  /** Derive RAG from a week's platform metrics (period-aware). */
+  function healthFromMetrics(hist) {
+    if (!hist) return "gray";
+    var sev1 = hist.sev1 != null ? Number(hist.sev1) : 0;
+    var sev2 = hist.sev2 != null ? Number(hist.sev2) : 0;
+    var success = hist.success != null ? Number(hist.success) : null;
+    var failure = hist.failure != null ? Number(hist.failure) : null;
+    var hasData = hist.messages != null || success != null || failure != null ||
+      hist.sev1 != null || hist.sev2 != null || hist.sev3 != null;
+    if (!hasData) return "gray";
+    if (sev1 > 0) return "red";
+    if (success != null && success < 95) return "red";
+    if (failure != null && failure > 5) return "red";
+    if (sev2 > 0) return "yellow";
+    if (success != null && success < 97) return "yellow";
+    if (failure != null && failure > 3) return "yellow";
+    return "green";
+  }
+
+  function healthExplain(hist, cls) {
+    if (!hist || cls === "green" || cls === "gray") return "";
+    var parts = [];
+    var success = hist.success != null ? Number(hist.success) : null;
+    var failure = hist.failure != null ? Number(hist.failure) : null;
+    var sev1 = hist.sev1 != null ? Number(hist.sev1) : 0;
+    var sev2 = hist.sev2 != null ? Number(hist.sev2) : 0;
+    if (sev1 > 0) parts.push("Sev1 " + sev1);
+    if (sev2 > 0) parts.push("Sev2 " + sev2);
+    if (success != null && ((cls === "red" && success < 95) || (cls === "yellow" && success < 97))) {
+      parts.push("Success " + success + "%");
+    }
+    if (failure != null && ((cls === "red" && failure > 5) || (cls === "yellow" && failure > 3))) {
+      parts.push("Failure " + failure + "%");
+    }
+    return parts.join(", ");
+  }
+
+  /** Weeks belonging to a given month name (from Week Over Week Summary). */
+  function weeksForMonth(monthName) {
+    var selected = String(monthName || "").trim();
+    if (!selected) return [];
+    var selL = selected.toLowerCase();
+    var selMonth = guessMonth(selected).toLowerCase();
+    return state.weeks.filter(function (w) {
+      var wm = String(w.month || guessMonth(w.label) || "").toLowerCase();
+      if (!wm || wm === "unknown") return false;
+      return wm === selL || wm === selMonth ||
+        selL.indexOf(wm) === 0 || wm.indexOf(selL) === 0;
+    });
+  }
+
+  /** Weeks belonging to the selected History month (from Week Over Week Summary). */
+  function weeksForSelectedMonth() {
+    return weeksForMonth(state.selectedMonth);
+  }
+
+  /**
+   * Roll up Week Over Week Summary metrics for one platform in a given month.
+   * Messages/sev summed; success/failure/latency/availability averaged across weeks with data.
+   */
+  function wowMonthSnapshotFor(pid, monthName) {
+    var weeks = weeksForMonth(monthName);
+    if (!weeks.length) return null;
+    var msgSum = 0, msgN = 0;
+    var sucSum = 0, sucN = 0;
+    var failSum = 0, failN = 0;
+    var latSum = 0, latN = 0;
+    var availSum = 0, availN = 0;
+    var sev1 = 0, sev2 = 0, sev3 = 0;
+    var any = false;
+    weeks.forEach(function (w) {
+      var p = w.platforms && w.platforms[pid];
+      if (!p) return;
+      any = true;
+      if (p.messages != null) { msgSum += Number(p.messages); msgN++; }
+      if (p.success != null) { sucSum += Number(p.success); sucN++; }
+      if (p.failure != null) { failSum += Number(p.failure); failN++; }
+      if (p.latency != null) { latSum += Number(p.latency); latN++; }
+      if (p.availability != null) { availSum += Number(p.availability); availN++; }
+      if (p.sev1 != null) sev1 += Number(p.sev1) || 0;
+      if (p.sev2 != null) sev2 += Number(p.sev2) || 0;
+      if (p.sev3 != null) sev3 += Number(p.sev3) || 0;
+    });
+    if (!any) return null;
+    return {
+      messages: msgN ? msgSum : null,
+      success: sucN ? (sucSum / sucN) : null,
+      failure: failN ? (failSum / failN) : null,
+      latency: latN ? (latSum / latN) : null,
+      availability: availN ? (availSum / availN) : null,
+      sev1: sev1,
+      sev2: sev2,
+      sev3: sev3,
+      weekCount: weeks.length
+    };
+  }
+
+  /**
+   * Roll up Week Over Week Summary metrics for one platform in the selected month.
+   */
+  function wowMonthSnapshot(pid) {
+    return wowMonthSnapshotFor(pid, state.selectedMonth);
+  }
+
+  /**
+   * Month health hist: Monthly Message Processed for volume/rates when present,
+   * Week Over Week Summary for Sev + gap fill.
+   */
+  function monthHealthHist(pid) {
+    var monthly = monthlySnapshot(pid);
+    var wow = wowMonthSnapshot(pid);
+    if (!monthly && !wow) return null;
+    monthly = monthly || {};
+    wow = wow || {};
+    return {
+      messages: monthly.messages != null ? monthly.messages : wow.messages,
+      success: monthly.success != null ? monthly.success : wow.success,
+      failure: monthly.failure != null ? monthly.failure : wow.failure,
+      latency: wow.latency != null ? wow.latency : null,
+      sev1: wow.sev1 != null ? wow.sev1 : 0,
+      sev2: wow.sev2 != null ? wow.sev2 : 0,
+      sev3: wow.sev3 != null ? wow.sev3 : null
+    };
+  }
+
+  function platformHealthDetail(pid) {
+    var name = (PLATFORMS.filter(function (p) { return p.id === pid; })[0] || {}).name || pid;
+    if (state.mode === "month") {
+      var hist = monthHealthHist(pid);
+      var cls = healthFromMetrics(hist);
+      return { name: name, cls: cls, reason: healthExplain(hist, cls) };
+    }
+    var week = currentWeek();
+    var hist = week && week.platforms ? week.platforms[pid] : null;
+    var cls = periodHealth(pid);
+    return { name: name, cls: cls, reason: healthExplain(hist, cls) };
+  }
+
+  /** Live health for selected History period (week or month). */
+  function periodHealth(pid) {
+    if (state.mode === "month") {
+      return healthFromMetrics(monthHealthHist(pid));
+    }
+    var week = currentWeek();
+    var hist = week && week.platforms ? week.platforms[pid] : null;
+    var fromMetrics = healthFromMetrics(hist);
+    // Latest week: prefer sheet RAG emoji when metrics are missing
+    if (fromMetrics === "gray" && week && state.weeks.length &&
+        week.id === state.weeks[state.weeks.length - 1].id) {
+      var s = state.exec || { health: {} };
+      return healthClass(s.health && s.health[pid]);
+    }
+    return fromMetrics;
+  }
+
+  function healthDot(pid) {
+    var cls = periodHealth(pid);
+    var label = cls === "green" ? "Healthy" : (cls === "yellow" ? "Watch" : (cls === "red" ? "Issue" : "No data"));
+    return '<span class="dot live ' + cls + '" title="' + label + '" aria-label="' + label + '"></span>';
+  }
+
+  function guessMonth(weekLabel) {
+    var s = String(weekLabel || "").toLowerCase();
+    var months = ["january","february","march","april","may","june","july","august","september","october","november","december"];
+    var short = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+    var hits = [];
+    for (var i = 0; i < months.length; i++) {
+      var idx = s.indexOf(months[i]);
+      if (idx >= 0) hits.push({ idx: idx, name: months[i].charAt(0).toUpperCase() + months[i].slice(1) });
+      else {
+        idx = s.indexOf(short[i]);
+        if (idx >= 0) hits.push({ idx: idx, name: months[i].charAt(0).toUpperCase() + months[i].slice(1) });
+      }
+    }
+    if (!hits.length) return "Unknown";
+    hits.sort(function (a, b) { return a.idx - b.idx; });
+    // Range labels like "30th June- 06th July" — use the ending month
+    return hits[hits.length - 1].name;
+  }
+
+  function cleanWeekLabel(s) {
+    return String(s || "")
+      .replace(/14ht/gi, "14th")
+      .replace(/22th/gi, "22nd")
+      .replace(/[\u2013\u2014]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function monthsFromWeeks(weeks) {
+    var months = [], seen = {}, carry = "Unknown";
+    weeks.forEach(function (w) {
+      var m = guessMonth(w.label);
+      if (m !== "Unknown") carry = m;
+      w.month = m === "Unknown" ? carry : m;
+      if (!seen[w.month]) { seen[w.month] = true; months.push(w.month); }
+    });
+    return months;
+  }
+
+  function weekLabelsOverlap(a, b) {
+    var sa = cleanWeekLabel(a).toLowerCase();
+    var sb = cleanWeekLabel(b).toLowerCase();
+    var nums = function (s) {
+      return s.match(/\d{1,2}(?:st|nd|rd|th)?/g) || [];
+    };
+    var na = nums(sa), nb = nums(sb);
+    if (na.length >= 2 && nb.length >= 2) return na[0] === nb[0] && na[1] === nb[1];
+    if (na.length && nb.length) return na[0] === nb[0];
+    return sa === sb;
+  }
+
+  function pickLatestWeekId(weeks, reportingPeriod) {
+    if (!weeks.length) return null;
+    var rp = cleanWeekLabel(reportingPeriod || "");
+    if (rp) {
+      for (var i = weeks.length - 1; i >= 0; i--) {
+        if (weekLabelsOverlap(weeks[i].label, rp)) return weeks[i].id;
+      }
+    }
+    return weeks[weeks.length - 1].id;
+  }
+
+  function formatDayLabel(iso) {
+    var d = new Date(iso + "T00:00:00");
+    if (isNaN(d.getTime())) return iso;
+    var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return d.getDate() + " " + months[d.getMonth()];
+  }
+
+  /** Weekly sheet values are already in millions. */
+  function formatMsgsM(millions) {
+    if (millions == null || millions === "" || isNaN(Number(millions))) return "—";
+    var n = Number(millions);
+    var s = Math.abs(n) >= 1 ? n.toFixed(2) : (Math.abs(n) >= 0.01 ? n.toFixed(3) : n.toFixed(4));
+    return s + " M";
+  }
+
+  /** Absolute message counts → millions (same unit as weekly). */
+  function formatMsgsAbs(count) {
+    if (count == null || count === "" || isNaN(Number(count))) return "—";
+    return formatMsgsM(Number(count) / 1e6);
+  }
+
+  /** Per-platform display unit: keep one unit within a platform page. */
+  function platformMsgUnit(pid) {
+    if (pid === "boomi" || pid === "cpi") return "K";
+    return "M";
+  }
+
+  function formatMsgsK(thousands) {
+    if (thousands == null || thousands === "" || isNaN(Number(thousands))) return "—";
+    var n = Number(thousands);
+    var s = Math.abs(n) >= 100 ? n.toFixed(0) : (Math.abs(n) >= 10 ? n.toFixed(1) : n.toFixed(2));
+    return s + " K";
+  }
+
+  /**
+   * Format message volume for a platform.
+   * fromMillions=true → value is already in millions (WoW / monthly).
+   * fromMillions=false → value is an absolute count (Data tab).
+   */
+  function formatPlatformMsgs(pid, value, fromMillions) {
+    if (value == null || value === "" || isNaN(Number(value))) return "—";
+    var millions = fromMillions ? Number(value) : Number(value) / 1e6;
+    if (platformMsgUnit(pid) === "K") return formatMsgsK(millions * 1000);
+    return formatMsgsM(millions);
+  }
+
+  function toPlatformMsgValue(pid, value, fromMillions) {
+    if (value == null || value === "" || isNaN(Number(value))) return null;
+    var millions = fromMillions ? Number(value) : Number(value) / 1e6;
+    return platformMsgUnit(pid) === "K" ? millions * 1000 : millions;
+  }
+
+  function formatPct(n) {
+    if (n == null || n === "" || isNaN(Number(n))) return "—";
+    return Number(n).toFixed(2) + "%";
+  }
+
+  function formatLatency(rawOrNum) {
+    if (rawOrNum == null || rawOrNum === "" || rawOrNum === "—") return "—";
+    if (typeof rawOrNum === "string") {
+      var s = rawOrNum.trim();
+      var nRaw = firstNumber(s);
+      if (nRaw == null) return "—";
+      var num = Number.isInteger(nRaw) ? String(nRaw) : String(Math.round(nRaw * 100) / 100);
+      if (/\bms\b/i.test(s)) return num + " ms";
+      if (/sec/i.test(s)) return num + " s";
+      return num + " s";
+    }
+    var n = firstNumber(rawOrNum);
+    if (n == null) return "—";
+    return (Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100)) + " s";
+  }
+
+  function formatAvail(rawOrNum) {
+    if (rawOrNum == null || rawOrNum === "" || rawOrNum === "—") return "—";
+    var n = typeof rawOrNum === "number" ? rawOrNum : firstNumber(rawOrNum);
+    return formatPct(n);
+  }
+
+  /** Parse exec summary strings like "16.20 M (...)" into millions. */
+  function parseMsgsToMillions(raw) {
+    if (raw == null || raw === "") return null;
+    if (typeof raw === "number") return raw;
+    var s = String(raw).trim();
+    var n = firstNumber(s);
+    if (n == null) return null;
+    if (/^\s*[\d,.]+\s*[kK]\b/.test(s) || /\bK\b/.test(s)) return n / 1000;
+    if (/^\s*[\d,.]+\s*[mM]\b/.test(s) || /\bM\b/.test(s) || /million/i.test(s)) return n;
+    // Bare number from weekly sheet = already millions; huge ints = absolute
+    if (n >= 1000) return n / 1e6;
+    return n;
+  }
+
+  function formatCount(n) {
+    if (n == null || isNaN(n)) return "—";
+    if (n >= 1e6) return formatMsgsM(n / 1e6);
+    if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + " K";
+    return String(Math.round(n));
+  }
+
+  function formatSeriesValue(series, value) {
+    if (value == null || isNaN(value)) return "—";
+    if (series.unit === "M") return formatMsgsM(value);
+    if (series.unit === "K") return formatMsgsK(value);
+    if (series.unit === "%") return formatPct(value);
+    if (series.unit === "s") return formatLatency(value);
+    return String(value);
+  }
+
+  function showBanner(msg, type) {
+    var b = document.getElementById("banner");
+    if (!msg) { b.className = "banner"; b.textContent = ""; return; }
+    b.className = "banner show " + (type || "info");
+    b.textContent = msg;
+  }
+
+  function stamp(id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function fetchCsv(gid) {
+    return fetch(csvUrl(gid), { cache: "no-store", mode: "cors" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.text();
+      })
+      .then(function (text) {
+        if (!text || text.length < 8 || /^\s*</.test(text)) throw new Error("Empty/non-CSV");
+        return text;
+      });
+  }
+
+  /* —— Parsers —— */
+  function parseExecBundle(rows) {
+    var summary = { period: "", health: {}, items: {}, leadership: "" };
+    var weekMap = {};
+    var weekOrder = [];
+    var currentWeek = "";
+
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var item = String(r[1] || "").trim();
+      var status = String(r[2] || "").trim();
+      var itemL = item.toLowerCase();
+
+      if (itemL === "reporting period") summary.period = status;
+      else if (itemL.indexOf("overall integration health") === 0) {
+        var parts = status.split("|").map(function (x) { return x.trim(); });
+        summary.health = { infolink: parts[0] || "", boomi: parts[1] || "", shipping: parts[2] || "", cpi: parts[3] || "" };
+      } else if (itemL.indexOf("leadership attention") === 0) {
+        summary.leadership = status;
+      } else {
+        var pidL = matchPlatform(item);
+        if (pidL) {
+          if (!summary.items[pidL]) summary.items[pidL] = {};
+          if (/integrations running/i.test(item)) {
+            summary.items[pidL].integrations = status;
+            summary.items[pidL].integrationsLabel = "Integrations";
+          } else if (/api processed/i.test(item)) {
+            summary.items[pidL].apiProcessed = status;
+            summary.items[pidL].integrations = status;
+            summary.items[pidL].integrationsLabel = "API Processed";
+          } else if (/messages processed/i.test(item)) summary.items[pidL].messages = status;
+          else if (/key highlights/i.test(item)) summary.items[pidL].highlights = status;
+          else if (/major risks/i.test(item)) summary.items[pidL].risks = status;
+        }
+      }
+
+      // Right panel WoW long format: cols 5..14
+      var week = cleanWeekLabel(String(r[5] || "").trim());
+      var platform = String(r[6] || "").trim();
+      if (week) currentWeek = week;
+      var pid = matchPlatform(platform);
+      if (!currentWeek || !pid) continue;
+      if (!weekMap[currentWeek]) {
+        weekMap[currentWeek] = { id: currentWeek, label: currentWeek, month: guessMonth(currentWeek), platforms: {} };
+        weekOrder.push(currentWeek);
+      }
+      weekMap[currentWeek].platforms[pid] = {
+        messages: firstNumber(r[7]),
+        success: firstNumber(r[8]),
+        failure: firstNumber(r[9]),
+        latency: firstNumber(r[10]),
+        availability: firstNumber(r[11]),
+        sev1: firstNumber(r[12]),
+        sev2: firstNumber(r[13]),
+        sev3: firstNumber(r[14]),
+        messagesRaw: String(r[7] || "").trim(),
+        successRaw: String(r[8] || "").trim(),
+        latencyRaw: String(r[10] || "").trim(),
+        availabilityRaw: String(r[11] || "").trim()
+      };
+    }
+
+    var weeks = weekOrder.map(function (id) { return weekMap[id]; });
+    return { summary: summary, weeks: weeks, months: monthsFromWeeks(weeks) };
+  }
+
+  function parseKpis(rows) {
+    var headerIdx = -1;
+    for (var i = 0; i < rows.length; i++) {
+      var h = (rows[i] || []).map(function (x) { return String(x || "").trim().toLowerCase(); });
+      if (h.indexOf("platform") >= 0 && h.indexOf("kpi") >= 0) { headerIdx = i; break; }
+    }
+    if (headerIdx < 0) return [];
+    var headers = rows[headerIdx].map(function (x) { return String(x || "").trim().toLowerCase(); });
+    var idx = {
+      platform: headers.indexOf("platform"),
+      kpi: headers.indexOf("kpi"),
+      target: headers.indexOf("target"),
+      status: headers.indexOf("current status"),
+      action: headers.indexOf("action plan*") >= 0 ? headers.indexOf("action plan*") : headers.indexOf("action plan"),
+      date: headers.indexOf("action date")
+    };
+    var out = [], current = "";
+    for (var r = headerIdx + 1; r < rows.length; r++) {
+      var row = rows[r];
+      var get = function (k) { return idx[k] >= 0 ? String(row[idx[k]] || "").trim() : ""; };
+      var platform = get("platform");
+      var kpi = get("kpi");
+      if (!kpi) continue;
+      if (platform) current = platform;
+      out.push({ platform: current || "Other", platformId: matchPlatform(current || platform), kpi: kpi, target: get("target"), status: get("status"), action: get("action"), date: get("date") });
+    }
+    return out;
+  }
+
+  function parseTickets(rows) {
+    var members = [];
+    var totals = { tickets: null, inProgress: null, closed: null, unassigned: null };
+    var wow = {};
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var a = String(r[0] || "").trim();
+      var name = String(r[1] || "").trim();
+      var tickets = String(r[2] || "").trim();
+      var prog = String(r[3] || "").trim();
+      var closed = String(r[4] || "").trim();
+      if (/^grand total$/i.test(name) || (/^grand total$/i.test(a) && !name)) {
+        totals.tickets = tickets || totals.tickets;
+        totals.inProgress = prog || totals.inProgress;
+        totals.closed = closed || totals.closed;
+      }
+      if (/^\d+$/.test(a) && name && name.toLowerCase() !== "team member" && tickets !== "" && !/jira board/i.test(name)) {
+        members.push({ name: name, tickets: tickets, inProgress: prog, closed: closed });
+        if (/^unassigned$/i.test(name)) totals.unassigned = tickets;
+      }
+      var metric = String(r[13] || "").trim();
+      var thisW = String(r[14] || "").trim();
+      var lastW = String(r[15] || "").trim();
+      if (metric && thisW && /tickets|inprogress|in progress|closed|unassigned/i.test(metric)) {
+        wow[metric.toLowerCase().replace(/\s+/g, "")] = { thisWeek: thisW, lastWeek: lastW };
+      }
+    }
+    if (wow.tickets) totals.tickets = wow.tickets.thisWeek;
+    if (wow.inprogress) totals.inProgress = wow.inprogress.thisWeek;
+    if (wow.closed) totals.closed = wow.closed.thisWeek;
+    if (wow.unassigned) totals.unassigned = wow.unassigned.thisWeek;
+    var seen = {}, cut = members.length;
+    members = members.filter(function (m) {
+      var k = m.name.toLowerCase();
+      if (seen[k]) return false;
+      seen[k] = true;
+      return true;
+    });
+    for (var j = 0; j < members.length; j++) if (/^unassigned$/i.test(members[j].name)) { cut = j + 1; break; }
+    return { members: members.slice(0, cut), totals: totals, wow: wow };
+  }
+
+  /** Embedded BU CSV (#buEmbeddedCsv) — primary source until a sheet GID is set. */
+  function embeddedBuCsvText() {
+    var el = document.getElementById("buEmbeddedCsv");
+    return el ? String(el.textContent || "").trim() : "";
+  }
+
+  function parseBuEmbedded() {
+    var text = embeddedBuCsvText();
+    var parsed = parseBuRegions(parseCSV(text));
+    parsed.source = "Embedded CSV";
+    return parsed;
+  }
+
+  function normalizeBuRegion(name) {
+    var s = String(name || "").trim();
+    if (/freight/i.test(s)) return "Freight & Logistics Region";
+    if (/gcc/i.test(s)) return "GCC Region";
+    if (/express/i.test(s)) return "Express Region";
+    return s;
+  }
+
+  function buStatusClass(status) {
+    var s = String(status || "").toLowerCase();
+    if (/complete|done|closed|live/i.test(s)) return "done";
+    if (/block/i.test(s)) return "blocked";
+    if (/hold|pause/i.test(s)) return "hold";
+    if (/progress|wip|ongoing/i.test(s)) return "progress";
+    return "na";
+  }
+
+  /**
+   * Parse BU region task sheet / CSV.
+   * Layout: region title row, then header "Sr No,Name,Task,Status,...", then task rows.
+   */
+  function parseBuRegions(rows) {
+    var regions = [];
+    var current = null;
+    var headerMode = false;
+
+    function flush() {
+      if (current && current.tasks.length) regions.push(current);
+      current = null;
+      headerMode = false;
+    }
+
+    for (var i = 0; i < (rows || []).length; i++) {
+      var r = rows[i] || [];
+      var cells = r.map(function (x) { return String(x || "").trim(); });
+      var nonEmpty = cells.filter(Boolean);
+      if (!nonEmpty.length) continue;
+
+      var joined = nonEmpty.join(" ").toLowerCase();
+      var regionHit = /(freight|gcc|express).*(region)?/i.test(nonEmpty[0]) &&
+        !/^sr\s*no$/i.test(nonEmpty[0]) &&
+        !/^\d+$/.test(nonEmpty[0]);
+
+      if (regionHit && nonEmpty.length <= 3) {
+        flush();
+        current = { name: normalizeBuRegion(nonEmpty[0]), tasks: [] };
+        headerMode = false;
+        continue;
+      }
+
+      if (/^sr\s*no$/i.test(nonEmpty[0]) && /name/i.test(joined) && /task/i.test(joined)) {
+        headerMode = true;
+        continue;
+      }
+
+      if (!current || !headerMode) continue;
+      if (!/^\d+$/.test(nonEmpty[0])) continue;
+
+      current.tasks.push({
+        sr: cells[0] || "",
+        name: cells[1] || "",
+        task: cells[2] || "",
+        status: cells[3] || "",
+        started: cells[4] || "",
+        end: cells[5] || "",
+        updated: cells[6] || "",
+        remarks: cells[7] || ""
+      });
+    }
+    flush();
+
+    var totals = { tasks: 0, inProgress: 0, completed: 0, blocked: 0 };
+    regions.forEach(function (reg) {
+      reg.tasks.forEach(function (t) {
+        totals.tasks++;
+        var cls = buStatusClass(t.status);
+        if (cls === "progress") totals.inProgress++;
+        else if (cls === "done") totals.completed++;
+        else if (cls === "blocked" || cls === "hold") totals.blocked++;
+      });
+    });
+
+    return {
+      regions: regions,
+      totals: totals,
+      source: "BU Regions"
+    };
+  }
+
+  function loadBuRegions() {
+    // Prefer published sheet when GID is set; otherwise use CSV embedded in this HTML.
+    if (GID.buRegions) {
+      return fetchCsv(GID.buRegions).then(function (text) {
+        var parsed = parseBuRegions(parseCSV(text));
+        if (!parsed.regions.length) parsed = parseBuEmbedded();
+        else parsed.source = "BU Regions sheet";
+        state.bu = parsed;
+        return parsed;
+      }).catch(function () {
+        state.bu = parseBuEmbedded();
+        return state.bu;
+      });
+    }
+    state.bu = parseBuEmbedded();
+    return Promise.resolve(state.bu);
+  }
+
+  function renderBuUpdates() {
+    var statsEl = document.getElementById("buStats");
+    var filterEl = document.getElementById("buFilter");
+    var listEl = document.getElementById("buRegions");
+    if (!statsEl || !listEl) return;
+    var bu = state.bu;
+    if (!bu || !bu.regions || !bu.regions.length) {
+      statsEl.innerHTML = "";
+      if (filterEl) filterEl.innerHTML = "";
+      listEl.innerHTML = '<div class="empty">No BU region tasks yet — paste the dummy table into the sheet and publish</div>';
+      stamp("buStatus");
+      return;
+    }
+
+    var t = bu.totals || {};
+    statsEl.innerHTML =
+      [["Regions", bu.regions.length], ["Open tasks", t.tasks || 0], ["In Progress", t.inProgress || 0], ["Completed", t.completed || 0]].map(function (x) {
+        return '<div class="card"><div class="metric"><div class="n">' + esc(String(x[1])) + '</div><div class="l">' + esc(x[0]) + "</div></div></div>";
+      }).join("");
+
+    if (filterEl) {
+      var filters = [{ id: "all", label: "All regions" }].concat(bu.regions.map(function (r) {
+        return { id: r.name, label: r.name.replace(/ Region$/i, "") };
+      }));
+      filterEl.innerHTML = '<div class="seg">' + filters.map(function (f) {
+        var active = (state.buRegionFilter || "all") === f.id ? " active" : "";
+        return '<button type="button" data-bu-region="' + esc(f.id) + '" class="' + active.trim() + '">' + esc(f.label) + "</button>";
+      }).join("") + "</div>" +
+        '<span class="cta" style="margin-left:4px;">' + esc(bu.source || "BU sheet") + "</span>";
+    }
+
+    var selected = state.buRegionFilter || "all";
+    var regions = bu.regions.filter(function (r) {
+      return selected === "all" || r.name === selected;
+    });
+
+    listEl.innerHTML = regions.map(function (reg) {
+      return (
+        '<div class="bu-region-card">' +
+          "<h3><span>" + esc(reg.name) + '</span><span class="count">' + esc(String(reg.tasks.length)) + " tasks</span></h3>" +
+          '<div class="table-wrap"><table class="data"><thead><tr>' +
+            "<th>Sr</th><th>Owner</th><th>Task</th><th>Status</th><th>Started</th><th>End</th><th>Updated</th><th>Remarks</th>" +
+          "</tr></thead><tbody>" +
+          reg.tasks.map(function (task) {
+            var cls = buStatusClass(task.status);
+            return "<tr><td>" + esc(task.sr) + "</td><td>" + esc(task.name) +
+              '</td><td class="task">' + esc(task.task) +
+              '</td><td><span class="badge ' + cls + '">' + esc(task.status || "—") + "</span></td><td>" +
+              esc(task.started || "—") + "</td><td>" + esc(task.end || "—") + "</td><td>" +
+              esc(task.updated || "—") + '</td><td class="remarks">' + esc(task.remarks || "—") + "</td></tr>";
+          }).join("") +
+          "</tbody></table></div>" +
+        "</div>"
+      );
+    }).join("") || '<div class="empty">No tasks for this region</div>';
+
+    stamp("buStatus");
+  }
+
+  /** Week Over Week Summary tab — has newer weeks than Exec Summary right panel. */
+  function parseWowSummary(rows) {
+    var weekMap = {};
+    var weekOrder = [];
+    var weeksMeta = [];
+    var currentPid = null;
+
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i] || [];
+      var c0 = String(r[0] || "").trim();
+      var c1 = String(r[1] || "").trim();
+      var c2 = String(r[2] || "").trim();
+      var c3 = String(r[3] || "").trim();
+
+      if (!c0 && !c1 && !c2 && c3 && /(\d|st|nd|rd|th|-)/i.test(c3)) {
+        weeksMeta = [];
+        for (var c = 3; c < r.length; c++) {
+          var lab = cleanWeekLabel(r[c]);
+          if (!lab) continue;
+          weeksMeta.push({ col: c, label: lab, id: lab });
+          if (!weekMap[lab]) {
+            weekMap[lab] = { id: lab, label: lab, month: guessMonth(lab), platforms: {} };
+            weekOrder.push(lab);
+          }
+        }
+        continue;
+      }
+
+      if (matchPlatform(c1)) currentPid = matchPlatform(c1);
+      var pid = currentPid;
+      if (!pid || !weeksMeta.length || !c2) continue;
+
+      var metricKey = null;
+      if (/^messages$/i.test(c2)) metricKey = "messages";
+      else if (/success\s*%/i.test(c2)) metricKey = "success";
+      else if (/failure\s*%/i.test(c2)) metricKey = "failure";
+      else if (/latency/i.test(c2)) metricKey = "latency";
+      else if (/availability/i.test(c2)) metricKey = "availability";
+      else if (/sev\s*1/i.test(c2)) metricKey = "sev1";
+      else if (/sev\s*2/i.test(c2)) metricKey = "sev2";
+      else if (/sev\s*3/i.test(c2)) metricKey = "sev3";
+      if (!metricKey) continue;
+
+      weeksMeta.forEach(function (wm) {
+        var raw = String(r[wm.col] || "").trim();
+        if (raw === "") return;
+        if (!weekMap[wm.id].platforms[pid]) weekMap[wm.id].platforms[pid] = {};
+        var p = weekMap[wm.id].platforms[pid];
+        var n = firstNumber(raw);
+        if (metricKey === "latency") { p.latency = n; p.latencyRaw = raw; }
+        else if (metricKey === "availability") { p.availability = n; p.availabilityRaw = raw; }
+        else p[metricKey] = n;
+      });
+    }
+
+    var weeks = weekOrder.map(function (id) { return weekMap[id]; }).filter(function (w) {
+      return PLATFORMS.some(function (p) {
+        return w.platforms[p.id] && w.platforms[p.id].messages != null;
+      });
+    });
+    return { weeks: weeks, months: monthsFromWeeks(weeks) };
+  }
+
+  /**
+   * Monthly Message Processed tab — four side-by-side platform blocks:
+   * Messages (M), then Success %, then Failure %.
+   * Labels look like "July 26".
+   */
+  function parseMonthlyMessages(rows) {
+    var byMonth = {};
+    var monthOrder = [];
+    var section = "messages"; // messages | success | failure
+    var platformCols = [
+      { id: "infolink", label: 0, value: 1 },
+      { id: "boomi", label: 3, value: 4 },
+      { id: "shipping", label: 6, value: 7 },
+      { id: "cpi", label: 9, value: 10 }
+    ];
+
+    function ensureMonth(label) {
+      var key = String(label || "").trim();
+      if (!key) return null;
+      var monthName = guessMonth(key);
+      if (!byMonth[key]) {
+        byMonth[key] = {
+          id: key,
+          label: key,
+          month: monthName,
+          platforms: {}
+        };
+        monthOrder.push(key);
+      }
+      return byMonth[key];
+    }
+
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i] || [];
+      var first = String(r[0] || "").trim();
+      var firstL = first.toLowerCase();
+
+      if (/^suc+ess\s*%/i.test(firstL)) { section = "success"; continue; }
+      if (/^failure\s*%/i.test(firstL)) { section = "failure"; continue; }
+      if (/^month$/i.test(firstL) || /^week$/i.test(firstL)) continue;
+      if (!first) continue;
+
+      platformCols.forEach(function (col) {
+        var label = String(r[col.label] || "").trim();
+        var val = firstNumber(r[col.value]);
+        if (!label || val == null) return;
+        var month = ensureMonth(label);
+        if (!month) return;
+        if (!month.platforms[col.id]) month.platforms[col.id] = {};
+        if (section === "messages") month.platforms[col.id].messages = val;
+        else if (section === "success") month.platforms[col.id].success = val;
+        else if (section === "failure") month.platforms[col.id].failure = val;
+      });
+    }
+
+    var months = monthOrder.map(function (id) { return byMonth[id]; }).filter(function (m) {
+      return PLATFORMS.some(function (p) {
+        return m.platforms[p.id] && m.platforms[p.id].messages != null;
+      });
+    });
+
+    return {
+      months: months,
+      labels: months.map(function (m) { return m.label; }),
+      byLabel: byMonth
+    };
+  }
+
+  function monthlySnapshot(pid) {
+    var snap = monthlySnapshotFor(pid, state.selectedMonth);
+    if (snap) return snap;
+    if (!state.monthly || !state.monthly.months || !state.monthly.months.length) return null;
+    var match = state.monthly.months[0];
+    return (match.platforms && match.platforms[pid]) || null;
+  }
+
+  function monthlySnapshotFor(pid, monthName) {
+    if (!state.monthly || !state.monthly.months || !state.monthly.months.length) return null;
+    var selectedL = String(monthName || "").toLowerCase();
+    var match = null;
+    for (var i = 0; i < state.monthly.months.length; i++) {
+      var m = state.monthly.months[i];
+      var lab = String(m.label || "").toLowerCase();
+      var month = String(m.month || "").toLowerCase();
+      if (lab === selectedL || month === selectedL || lab.indexOf(selectedL) === 0 || selectedL.indexOf(month) === 0) {
+        match = m;
+        break;
+      }
+    }
+    if (!match) return null;
+    return (match.platforms && match.platforms[pid]) || null;
+  }
+
+  /** Combined monthly snapshot for comparison (Monthly Message Processed + WoW rollup). */
+  function monthCompareSnapshot(pid, monthName) {
+    var monthly = monthlySnapshotFor(pid, monthName);
+    var wow = wowMonthSnapshotFor(pid, monthName);
+    if (!monthly && !wow) return null;
+    monthly = monthly || {};
+    wow = wow || {};
+    return {
+      messages: monthly.messages != null ? monthly.messages : wow.messages,
+      success: monthly.success != null ? monthly.success : wow.success,
+      failure: monthly.failure != null ? monthly.failure : wow.failure,
+      latency: wow.latency != null ? wow.latency : null,
+      availability: wow.availability != null ? wow.availability : null,
+      sev1: wow.sev1 != null ? wow.sev1 : 0,
+      sev2: wow.sev2 != null ? wow.sev2 : 0,
+      sev3: wow.sev3 != null ? wow.sev3 : 0,
+      weekCount: wow.weekCount || weeksForMonth(monthName).length
+    };
+  }
+
+  /**
+   * Daily Performance Dashboard — vertical label/value blocks per platform.
+   * Also accepts legacy Data-tab dated rows if present.
+   */
+  function parseDailyData(rows) {
+    var byPlatform = { infolink: [], boomi: [], shipping: [], cpi: [] };
+    var summary = { infolink: null, boomi: null, shipping: null, cpi: null };
+    var pid = null;
+    var pendingKey = null;
+    var bucket = null;
+
+    function ensureBucket(id) {
+      if (!summary[id]) {
+        summary[id] = {
+          messages: null, successCount: null, failureCount: null,
+          internal: null, external: null, discarded: null,
+          success: null, failure: null
+        };
+      }
+      return summary[id];
+    }
+
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i] || [];
+      var a0 = String(r[0] || "").trim();
+      var a1 = String(r[1] || "").trim();
+      if (!a0 && !a1) continue;
+
+      // Legacy dated daily rows (old Data tab)
+      if (/^\d{4}-\d{2}-\d{2}/.test(a0) && pid) {
+        var total = firstNumber(r[1]);
+        var successCount, failureCount, internal = null, external = null, discarded = null;
+        if (pid === "infolink") {
+          internal = firstNumber(r[2]);
+          external = firstNumber(r[3]);
+          successCount = firstNumber(r[4]);
+          failureCount = firstNumber(r[5]);
+        } else if (pid === "cpi") {
+          successCount = firstNumber(r[2]);
+          failureCount = firstNumber(r[3]);
+          discarded = firstNumber(r[4]);
+          if (successCount != null || failureCount != null) {
+            total = (successCount || 0) + (failureCount || 0);
+          } else if (total != null && discarded != null) {
+            total = Math.max(0, total - discarded);
+          }
+        } else {
+          successCount = firstNumber(r[2]);
+          failureCount = firstNumber(r[3]);
+        }
+        if (!byPlatform[pid]) byPlatform[pid] = [];
+        byPlatform[pid].push({
+          date: a0,
+          label: formatDayLabel(a0),
+          messages: total,
+          successCount: successCount,
+          failureCount: failureCount,
+          success: (total && successCount != null) ? Math.round((successCount / total) * 10000) / 100 : null,
+          failure: (total && failureCount != null) ? Math.round((failureCount / total) * 10000) / 100 : null,
+          internal: internal,
+          external: external,
+          discarded: discarded
+        });
+        continue;
+      }
+
+      var named = matchPlatform(a0.replace(/\s*message\s*$/i, ""));
+      if (named || /infolink message|boomi message|shipping api message|cpi message/i.test(a0)) {
+        pid = named || matchPlatform(a0);
+        bucket = pid ? ensureBucket(pid) : null;
+        pendingKey = null;
+        continue;
+      }
+      if (/^date$/i.test(a0)) continue;
+
+      if (/^total message/i.test(a0)) { pendingKey = "messages"; continue; }
+      if (/^success message/i.test(a0)) { pendingKey = "successCount"; continue; }
+      if (/^failure message/i.test(a0)) { pendingKey = "failureCount"; continue; }
+      if (/^internal message/i.test(a0)) { pendingKey = "internal"; continue; }
+      if (/^external message/i.test(a0)) { pendingKey = "external"; continue; }
+      if (/^discarded message/i.test(a0)) { pendingKey = "discarded"; continue; }
+
+      if (pendingKey && bucket) {
+        var n = firstNumber(a0);
+        if (n != null) bucket[pendingKey] = n;
+        pendingKey = null;
+      }
+    }
+
+    PLATFORMS.forEach(function (p) {
+      var b = summary[p.id];
+      if (!b || b.messages == null) return;
+      // CPI: exclude discarded from total processed messages
+      if (p.id === "cpi" && b.discarded != null) {
+        b.messages = Math.max(0, Number(b.messages) - Number(b.discarded));
+      } else if (p.id === "cpi" && b.successCount != null && b.failureCount != null) {
+        b.messages = Number(b.successCount) + Number(b.failureCount);
+      }
+      if (b.successCount != null && b.messages > 0) {
+        b.success = Math.round((b.successCount / b.messages) * 10000) / 100;
+      }
+      if (b.failureCount != null && b.messages > 0) {
+        b.failure = Math.round((b.failureCount / b.messages) * 10000) / 100;
+      }
+    });
+
+    var dates = [];
+    var seen = {};
+    PLATFORMS.forEach(function (p) {
+      (byPlatform[p.id] || []).forEach(function (d) {
+        if (!seen[d.date]) { seen[d.date] = true; dates.push(d.date); }
+      });
+    });
+    dates.sort();
+    return { byPlatform: byPlatform, dates: dates, summary: summary };
+  }
+
+  /** Data tab — dated rows per platform for the current reporting week. */
+  function parseDataTab(rows) {
+    var byPlatform = { infolink: [], boomi: [], shipping: [], cpi: [] };
+    var pid = "infolink";
+
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i] || [];
+      var a0 = String(r[0] || "").trim();
+      var a1 = String(r[1] || "").trim();
+      if (!a0 && !a1) continue;
+
+      if (/^infolink$/i.test(a0)) { pid = "infolink"; continue; }
+      if (/^boomi$/i.test(a0)) { pid = "boomi"; continue; }
+      if (/^shipping\s*api$/i.test(a0)) { pid = "shipping"; continue; }
+      if (/^cpi$/i.test(a0)) { pid = "cpi"; continue; }
+      if (/^date$/i.test(a0)) continue;
+
+      if (!/^\d{4}-\d{2}-\d{2}/.test(a0)) continue;
+
+      var total = firstNumber(r[1]);
+      var successCount = null, failureCount = null;
+      var partialCount = null, duplicateCount = null;
+      var internal = null, external = null, discarded = null;
+      if (pid === "infolink") {
+        internal = firstNumber(r[2]);
+        external = firstNumber(r[3]);
+        var pureSuccess = firstNumber(r[4]);
+        failureCount = firstNumber(r[5]);
+        partialCount = firstNumber(r[6]);
+        duplicateCount = firstNumber(r[7]);
+        // Success includes partially failed + duplicate (same as KPI framing)
+        successCount = null;
+        if (pureSuccess != null || partialCount != null || duplicateCount != null) {
+          successCount = (pureSuccess || 0) + (partialCount || 0) + (duplicateCount || 0);
+        }
+      } else if (pid === "cpi") {
+        successCount = firstNumber(r[2]);
+        failureCount = firstNumber(r[3]);
+        discarded = firstNumber(r[4]);
+        // CPI total excludes discarded (timer-overlap drops are not processed messages)
+        if (successCount != null || failureCount != null) {
+          total = (successCount || 0) + (failureCount || 0);
+        } else if (total != null && discarded != null) {
+          total = Math.max(0, total - discarded);
+        }
+      } else {
+        successCount = firstNumber(r[2]);
+        failureCount = firstNumber(r[3]);
+      }
+      if (!byPlatform[pid]) byPlatform[pid] = [];
+      byPlatform[pid].push({
+        date: a0,
+        label: formatDayLabel(a0),
+        messages: total,
+        successCount: successCount,
+        failureCount: failureCount,
+        partialCount: partialCount,
+        duplicateCount: duplicateCount,
+        success: (total && successCount != null) ? Math.round((successCount / total) * 10000) / 100 : null,
+        failure: (total && failureCount != null) ? Math.round((failureCount / total) * 10000) / 100 : null,
+        internal: internal,
+        external: external,
+        discarded: discarded
+      });
+    }
+
+    var dates = [];
+    var seen = {};
+    PLATFORMS.forEach(function (p) {
+      (byPlatform[p.id] || []).forEach(function (d) {
+        if (!seen[d.date]) { seen[d.date] = true; dates.push(d.date); }
+      });
+    });
+    dates.sort();
+    return { byPlatform: byPlatform, dates: dates, source: "Data tab" };
+  }
+
+  function mergeDataTabIntoDaily(daily, dataTab) {
+    daily = daily || { byPlatform: {}, dates: [], summary: {} };
+    if (!dataTab || !dataTab.dates || !dataTab.dates.length) return daily;
+    daily.byPlatform = dataTab.byPlatform;
+    daily.dates = dataTab.dates;
+    daily.source = dataTab.source || "Data tab";
+    daily.hasDayRows = true;
+    return daily;
+  }
+
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  function todayIsoLocal() {
+    var d = new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  function parseHourlyLogs(rows) {
+    var out = [];
+    var currentPid = null;
+    var currentTitle = "";
+    var idx = null;
+    var titles = [];
+
+    function key(s) {
+      return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+    function indexOfAny(headers, names) {
+      for (var n = 0; n < names.length; n++) {
+        var found = headers.indexOf(names[n]);
+        if (found >= 0) return found;
+      }
+      return -1;
+    }
+    function firstNonEmpty(row) {
+      for (var c = 0; c < row.length; c++) {
+        var v = String(row[c] || "").trim();
+        if (v) return v;
+      }
+      return "";
+    }
+    function dateFromText(text) {
+      var m = String(text || "").match(/(\d{4}-\d{1,2}-\d{1,2})/);
+      if (!m) return "";
+      var parts = m[1].split("-");
+      return parts[0] + "-" + pad2(Number(parts[1])) + "-" + pad2(Number(parts[2]));
+    }
+
+    for (var r = 0; r < rows.length; r++) {
+      var row = rows[r] || [];
+      var first = String(row[0] || "").trim();
+      var titleText = firstNonEmpty(row);
+      var rowPid = matchPlatform(titleText);
+      var nonEmpty = row.filter(function (x) { return String(x || "").trim() !== ""; }).length;
+
+      // Section title can sit in any column (Shipping uses column B)
+      if (rowPid && nonEmpty === 1 && !/^date$/i.test(titleText) && !/^hour$/i.test(titleText)) {
+        currentPid = rowPid;
+        currentTitle = titleText;
+        titles.push(titleText);
+        idx = null;
+        continue;
+      }
+
+      var headers = row.map(key);
+      if (headers.indexOf("hour") >= 0 &&
+          (headers.indexOf("totalmessagesprocessed") >= 0 || headers.indexOf("messages") >= 0)) {
+        idx = {
+          date: headers.indexOf("date"),
+          hour: headers.indexOf("hour"),
+          hourStart: headers.indexOf("hourstart"),
+          platform: headers.indexOf("platform"),
+          messages: indexOfAny(headers, ["totalmessagesprocessed", "totalmessages", "messages"]),
+          failed: indexOfAny(headers, ["failed", "failure", "failedmessages", "failuremsg", "failedmsg", "failures"]),
+          success: indexOfAny(headers, ["success", "successmessages", "successmsg", "successes"]),
+          latency: indexOfAny(headers, ["avglatencyseconds", "averagemessageprocessingtime", "avgprocessingtime", "avglatency"]),
+          partiallyFailed: headers.indexOf("partiallyfailed"),
+          duplicate: headers.indexOf("duplicate"),
+          running: headers.indexOf("running")
+        };
+        continue;
+      }
+
+      if (!idx) continue;
+      var pid = currentPid || (idx.platform >= 0 ? matchPlatform(row[idx.platform]) : null);
+      var hourStart = idx.hourStart >= 0 ? String(row[idx.hourStart] || "").trim() : "";
+      var date = idx.date >= 0 ? String(row[idx.date] || "").trim() : "";
+      if (!date) date = dateFromText(hourStart);
+      if (!date) date = "sheet-day";
+      var hour = idx.hour >= 0 ? firstNumber(row[idx.hour]) : null;
+      var messages = idx.messages >= 0 ? firstNumber(row[idx.messages]) : null;
+      if (!pid || hour == null || messages == null) continue;
+      var successVal = idx.success >= 0 ? firstNumber(row[idx.success]) : null;
+      var partiallyFailedVal = idx.partiallyFailed >= 0 ? firstNumber(row[idx.partiallyFailed]) : null;
+      // Infolink: treat partially failed as success for live metrics
+      if (pid === "infolink" && successVal != null && partiallyFailedVal != null) {
+        successVal = successVal + partiallyFailedVal;
+      }
+      out.push({
+        date: date,
+        hour: Math.round(hour),
+        hourStart: hourStart,
+        platformId: pid,
+        title: currentTitle,
+        messages: messages,
+        failed: idx.failed >= 0 ? firstNumber(row[idx.failed]) : null,
+        success: successVal,
+        avgLatency: idx.latency >= 0 ? firstNumber(row[idx.latency]) : null,
+        partiallyFailed: partiallyFailedVal,
+        duplicate: idx.duplicate >= 0 ? firstNumber(row[idx.duplicate]) : null,
+        running: idx.running >= 0 ? firstNumber(row[idx.running]) : null
+      });
+    }
+    return { rows: out, titles: titles };
+  }
+
+  function hourlyLiveRows() {
+    var all = state.hourly || [];
+    if (!all.length) return [];
+    var currentHour = new Date().getHours();
+    var today = todayIsoLocal();
+    var out = [];
+    // Per platform: use that platform's latest sheet day, treat as today
+    PLATFORMS.forEach(function (p) {
+      var plat = all.filter(function (r) { return r.platformId === p.id; });
+      if (!plat.length) return;
+      var latestDate = plat.map(function (r) { return r.date; }).sort().slice(-1)[0];
+      plat.filter(function (r) {
+        return r.date === latestDate && r.hour <= currentHour;
+      }).forEach(function (r) {
+        out.push({
+          date: today,
+          hour: r.hour,
+          hourStart: r.hourStart,
+          platformId: r.platformId,
+          title: r.title,
+          messages: r.messages,
+          failed: r.failed,
+          success: r.success,
+          avgLatency: r.avgLatency,
+          partiallyFailed: r.partiallyFailed,
+          duplicate: r.duplicate,
+          running: r.running
+        });
+      });
+    });
+    return out.sort(function (a, b) {
+      if (a.hour !== b.hour) return a.hour - b.hour;
+      return String(a.platformId).localeCompare(String(b.platformId));
+    });
+  }
+
+  function loadHourlyFeed() {
+    return fetchCsv(GID.hourly).then(function (text) {
+      var parsed = parseHourlyLogs(parseCSV(text));
+      state.hourly = parsed.rows;
+      state.hourlyMeta = { titles: parsed.titles };
+      state.hourlySource = "sheet";
+    }).catch(function (e) {
+      state.hourly = [];
+      state.hourlyMeta = { titles: [] };
+      state.hourlySource = "error";
+      return null;
+    });
+  }
+
+  function ecgPath(rows) {
+    var width = 620, mid = 41;
+    if (!rows.length) return "M0 " + mid + " L" + width + " " + mid;
+    var values = rows.map(function (r) { return r.messages == null ? 0 : r.messages; });
+    var max = Math.max.apply(null, values.concat([1]));
+    var min = Math.min.apply(null, values.concat([0]));
+    var step = width / Math.max(rows.length, 1);
+    var d = "M0 " + mid;
+    rows.forEach(function (r, i) {
+      var x = i * step;
+      var normalized = (r.messages - min) / Math.max(max - min, 1);
+      var amp = 8 + normalized * 24;
+      d += " L" + (x + step * .18).toFixed(1) + " " + mid;
+      d += " L" + (x + step * .28).toFixed(1) + " " + (mid + 5).toFixed(1);
+      d += " L" + (x + step * .38).toFixed(1) + " " + (mid - amp).toFixed(1);
+      d += " L" + (x + step * .48).toFixed(1) + " " + (mid + amp * .55).toFixed(1);
+      d += " L" + (x + step * .60).toFixed(1) + " " + mid;
+      d += " L" + (x + step).toFixed(1) + " " + mid;
+    });
+    return d;
+  }
+
+  function formatLiveCount(n) {
+    return n == null ? "—" : Number(n).toLocaleString("en-US");
+  }
+
+  function stockSeries(rows, p) {
+    var defs = [
+      { key: "success", name: "Success", color: "#16A34A", metric: "count", laneMin: 70, laneMax: 96 },
+      { key: "failed", name: "Failed", color: "#F97316", metric: "count", laneMin: 38, laneMax: 62 },
+      { key: "avgLatency", name: "Latency", color: "#8B5CF6", metric: "latency", laneMin: 6, laneMax: 30 }
+    ];
+    var lastHour = rows.length ? rows[rows.length - 1].hour : -1;
+    // Show only three upcoming slots to retain context without wasting chart space
+    var upcoming = [];
+    for (var h = lastHour + 1; h <= Math.min(23, lastHour + 3); h++) {
+      upcoming.push({ week: pad2(h) + ":00", value: null, raw: null, total: null });
+    }
+    return defs.map(function (def) {
+      var vals = rows.map(function (r) { return r[def.key]; }).filter(function (v) { return v != null; });
+      var min = vals.length ? Math.min.apply(null, vals) : 0;
+      var max = vals.length ? Math.max.apply(null, vals) : 1;
+      var points = rows.map(function (r) {
+        var raw = r[def.key];
+        var laneValue = raw == null
+          ? null
+          : (max === min
+            ? (def.laneMin + def.laneMax) / 2
+            : def.laneMin + ((raw - min) / (max - min)) * (def.laneMax - def.laneMin));
+        return { week: pad2(r.hour) + ":00", value: laneValue, raw: raw, total: r.messages };
+      });
+      return {
+        name: def.name,
+        color: def.color,
+        metric: def.metric,
+        points: points.concat(upcoming)
+      };
+    });
+  }
+
+  function renderHomeHourly() {
+    var el = document.getElementById("homeHourly");
+    var chip = document.getElementById("hourlyLiveChip");
+    if (!el) return;
+    var live = hourlyLiveRows();
+    if (!live.length) {
+      if (chip) chip.innerHTML = '<span class="pulse"></span> Waiting for hourly data';
+      el.innerHTML = '<div class="card"><div class="empty">Hourly Data tab has no readable platform rows.</div></div>';
+      return;
+    }
+
+    var currentHour = new Date().getHours();
+    var latestOverall = Math.max.apply(null, live.map(function (r) { return r.hour; }));
+    var showHour = Math.min(latestOverall, currentHour);
+    if (chip) chip.innerHTML = '<span class="pulse"></span> Live · updated ' +
+      pad2(showHour) + ":00";
+
+    var html = '<div class="heartbeat-grid">';
+    PLATFORMS.forEach(function (p) {
+      var rows = live.filter(function (r) { return r.platformId === p.id; });
+      var latest = rows.length ? rows[rows.length - 1] : null;
+      html += '<article class="heartbeat-card">';
+      html += '<div class="heartbeat-head"><div class="heartbeat-name"><span class="dot live ' +
+        (latest ? "green" : "gray") + '"></span>' + esc(p.name) + '</div><div class="heartbeat-time">' +
+        (latest
+          ? "Today · hours 00:00–" + pad2(latest.hour) + ":00"
+          : "Awaiting data") + "</div></div>";
+      if (!latest) {
+        html += '<div class="heartbeat-empty">Add the ' + esc(p.name) + ' section to Hourly Data</div></article>';
+        return;
+      }
+      var series = stockSeries(rows, p);
+      html += '<div class="live-lines">' + registerChart(series, 180, {
+        stock: true,
+        label: p.name + " hourly performance"
+      }) + "</div>";
+      var successTotal = rows.reduce(function (sum, r) {
+        return sum + (r.success == null ? 0 : Number(r.success));
+      }, 0);
+      var failedTotal = rows.reduce(function (sum, r) {
+        return sum + (r.failed == null ? 0 : Number(r.failed));
+      }, 0);
+      var latencyRows = rows.filter(function (r) { return r.avgLatency != null; });
+      var avgLatency = latencyRows.length
+        ? latencyRows.reduce(function (sum, r) { return sum + Number(r.avgLatency); }, 0) / latencyRows.length
+        : null;
+      html += '<div class="snapshot-context">Cumulative totals for completed hours · 00:00 to ' +
+        pad2(latest.hour) + ":00 · Latency is the average of those hours</div>";
+      html += '<div class="line-stats">' + series.map(function (s) {
+        var value = s.metric === "latency"
+          ? formatLatency(avgLatency)
+          : formatLiveCount(s.name === "Success" ? successTotal : failedTotal);
+        return '<div class="line-stat"><div class="name"><i style="background:' + s.color + '"></i>' +
+          esc(s.name) + '</div><strong>' + esc(value) + "</strong></div>";
+      }).join("") + "</div></article>";
+    });
+    html += "</div>";
+    el.innerHTML = html;
+    bindChartInteractions();
+  }
+
+  function assessKpi(kpi) {
+    var t = String(kpi.target || "").trim();
+    var targetN = firstNumber(t);
+    var current = firstNumber(kpi.status);
+    if (targetN == null || current == null) return { state: "na", label: "Info", pct: null, current: current };
+    var lowerBetter = /^</.test(t);
+    var ok = lowerBetter ? current <= targetN : current >= targetN;
+    var pct = lowerBetter
+      ? Math.max(0, Math.min(100, 100 - (current / Math.max(targetN * 2, current, 0.0001)) * 100))
+      : Math.max(0, Math.min(100, (current / Math.max(targetN, 0.0001)) * 100));
+    var near = Math.abs(current - targetN) <= Math.max(1, targetN * 0.02);
+    var state = ok ? "met" : (near ? "watch" : "miss");
+    return { state: state, label: ok ? "Met" : (near ? "Watch" : "Miss"), pct: pct, current: current };
+  }
+
+  function formatKpiValue(kpi, value) {
+    if (value == null || isNaN(Number(value))) return "—";
+    var context = String(kpi.target || "") + " " + String(kpi.status || "");
+    var rounded = Math.round(Number(value) * 100) / 100;
+    if (/%/.test(context)) return rounded + "%";
+    if (/\bsec/i.test(context)) return rounded + " sec";
+    if (/\bhr|hour/i.test(context)) return rounded + " hr";
+    return String(rounded);
+  }
+
+  function kpiGapText(kpi, assessment) {
+    var target = firstNumber(kpi.target);
+    var current = assessment.current;
+    if (target == null || current == null) return "Not measured";
+    var lowerBetter = /^</.test(String(kpi.target || "").trim());
+    var gap = Math.round(Math.abs(Number(current) - target) * 100) / 100;
+    if (gap < 0.005) return "At threshold";
+    var context = String(kpi.target || "") + " " + String(kpi.status || "");
+    var unit = /%/.test(context) ? " pp" : (/\bsec/i.test(context) ? " sec" : (/\bhr|hour/i.test(context) ? " hr" : ""));
+    if (lowerBetter) return gap + unit + (current <= target ? " headroom" : " over");
+    return gap + unit + (current >= target ? " above" : " below");
+  }
+
+  function kpiComparisonHtml(kpi, assessment) {
+    return (
+      '<div class="kpi-compare">' +
+        '<div><span class="lbl">Current</span><strong>' + esc(formatKpiValue(kpi, assessment.current)) + "</strong></div>" +
+        '<div><span class="lbl">Target</span><strong>' + esc(kpi.target || "—") + "</strong></div>" +
+        '<div><span class="lbl">Margin</span><strong class="' + esc(assessment.state) + '">' +
+          esc(kpiGapText(kpi, assessment)) + "</strong></div>" +
+      "</div>"
+    );
+  }
+
+  /* —— Selection helpers —— */
+  function currentWeek() {
+    if (!state.weeks.length) return null;
+    if (state.mode === "month" && state.selectedMonth) {
+      var inMonth = weeksForSelectedMonth();
+      if (inMonth.length) return inMonth[inMonth.length - 1];
+    }
+    if (state.selectedWeekId) {
+      for (var i = 0; i < state.weeks.length; i++) if (state.weeks[i].id === state.selectedWeekId) return state.weeks[i];
+    }
+    return state.weeks[state.weeks.length - 1];
+  }
+
+  function weeksInScope() {
+    if (state.mode === "month" && state.selectedMonth) {
+      return weeksForSelectedMonth();
+    }
+    var w = currentWeek();
+    return w ? [w] : [];
+  }
+
+  function platformSeries(pid, metric, limit) {
+    var pts = [];
+    state.weeks.forEach(function (w) {
+      var p = w.platforms[pid];
+      if (!p || p[metric] == null) return;
+      pts.push({ week: w.label, value: p[metric], id: w.id });
+    });
+    if (limit && pts.length > limit) pts = pts.slice(pts.length - limit);
+    return pts;
+  }
+
+  /** Build week-over-week or month-over-month comparison context for a platform. */
+  function getComparisonContext(pid) {
+    if (state.mode === "month") {
+      var month = state.selectedMonth;
+      if (!month) return null;
+      var idx = state.months.indexOf(month);
+      var prevMonth = idx >= 0 && idx < state.months.length - 1 ? state.months[idx + 1] : null;
+      return {
+        mode: "month",
+        currentLabel: month,
+        previousLabel: prevMonth || null,
+        current: monthCompareSnapshot(pid, month) || {},
+        previous: prevMonth ? (monthCompareSnapshot(pid, prevMonth) || null) : null,
+        weekCount: (monthCompareSnapshot(pid, month) || {}).weekCount || weeksForMonth(month).length,
+        source: "Monthly Message Processed + WoW"
+      };
+    }
+    var week = currentWeek();
+    if (!week) return null;
+    var wIdx = -1;
+    for (var i = 0; i < state.weeks.length; i++) {
+      if (state.weeks[i].id === week.id) { wIdx = i; break; }
+    }
+    var prevWeek = wIdx > 0 ? state.weeks[wIdx - 1] : null;
+    return {
+      mode: "week",
+      currentLabel: week.label,
+      previousLabel: prevWeek ? prevWeek.label : null,
+      current: week.platforms[pid] || {},
+      previous: prevWeek ? (prevWeek.platforms[pid] || {}) : null,
+      weekCount: 1,
+      source: "Week Over Week Summary"
+    };
+  }
+
+  function formatCompareMetric(metricKey, value, hist, pid) {
+    if (value == null || value === "") return "—";
+    if (metricKey === "messages") return formatPlatformMsgs(pid, value, true);
+    if (metricKey === "failure") return formatPct(value);
+    if (metricKey === "latency") {
+      var raw = hist && hist.latencyRaw != null ? hist.latencyRaw : value;
+      return formatLatency(raw);
+    }
+    if (metricKey === "availability") {
+      var availRaw = hist && hist.availabilityRaw != null ? hist.availabilityRaw : value;
+      return formatAvail(availRaw);
+    }
+    return String(value);
+  }
+
+  function computeComparisonDelta(current, previous, lowerBetter) {
+    if (current == null || previous == null || isNaN(Number(current)) || isNaN(Number(previous))) {
+      return { hasDelta: false, cls: "na", arrow: "", text: "No previous data" };
+    }
+    var c = Number(current);
+    var p = Number(previous);
+    var abs = c - p;
+    var pct = p !== 0 ? (abs / Math.abs(p)) * 100 : (abs !== 0 ? 100 : 0);
+    var flat = Math.abs(abs) < 0.0001 || Math.abs(pct) < 0.05;
+    var improved = lowerBetter ? abs < 0 : abs > 0;
+    var arrow = flat ? "→" : (abs > 0 ? "↑" : "↓");
+    var cls = flat ? "flat" : (improved ? (abs > 0 ? "up" : "down good") : (abs > 0 ? "up bad" : "down"));
+    var sign = abs > 0 ? "+" : "";
+    var text = sign + (Math.abs(pct) >= 10 ? pct.toFixed(0) : pct.toFixed(1)) + "%";
+    return { hasDelta: true, cls: cls, arrow: arrow, text: text, abs: abs, pct: pct, improved: improved };
+  }
+
+  function comparisonTrendPoints(pid, metricKey, limit) {
+    if (state.mode === "month") {
+      var pts = [];
+      var months = state.months.slice();
+      if (limit && months.length > limit) months = months.slice(0, limit);
+      months = months.slice().reverse();
+      months.forEach(function (m) {
+        var snap = monthCompareSnapshot(pid, m);
+        if (!snap || snap[metricKey] == null) return;
+        pts.push({ week: m, value: snap[metricKey] });
+      });
+      return pts;
+    }
+    return recentWeeksWindow(limit || 4).map(function (w) {
+      var p = w.platforms[pid] || {};
+      return { week: w.label, value: p[metricKey], id: w.id };
+    }).filter(function (pt) { return pt.value != null; });
+  }
+
+  /** Last N weeks ending at the selected week (oldest → newest). At least 4 when available. */
+  function recentWeeksWindow(count) {
+    count = count || 4;
+    if (!state.weeks.length) return [];
+    var week = currentWeek();
+    var endIdx = state.weeks.length - 1;
+    if (week) {
+      for (var i = 0; i < state.weeks.length; i++) {
+        if (state.weeks[i].id === week.id) { endIdx = i; break; }
+      }
+    }
+    var startIdx = Math.max(0, endIdx - count + 1);
+    return state.weeks.slice(startIdx, endIdx + 1);
+  }
+
+  var COMPARE_METRICS = [
+    { key: "messages", label: "Total messages", lowerBetter: false, color: "#2563EB" },
+    { key: "failure", label: "Failure %", lowerBetter: true, color: "#DC291E", beginAtZero: true, suggestedMax: 3.3, target: "Healthy ≤ 3%" },
+    { key: "latency", label: "Latency", lowerBetter: true, color: "#8B5CF6", beginAtZero: true, target: "Lower is better" },
+    { key: "availability", label: "Platform availability", lowerBetter: false, color: "#0D9488", axisMin: 95, axisMax: 100, target: "Target ≥ 99.9%" }
+  ];
+
+  function renderComparisonCard(pid, metric, ctx, color) {
+    var curVal = ctx.current[metric.key];
+    var prevVal = ctx.previous ? ctx.previous[metric.key] : null;
+    var delta = computeComparisonDelta(curVal, prevVal, metric.lowerBetter);
+    var prevDisplay = prevVal != null
+      ? formatCompareMetric(metric.key, prevVal, ctx.previous, pid)
+      : "—";
+    var msgUnit = platformMsgUnit(pid);
+    var trendPts = comparisonTrendPoints(pid, metric.key, state.mode === "month" ? 6 : 4);
+    if (metric.key === "messages" && msgUnit === "K") {
+      trendPts = trendPts.map(function (pt) {
+        return { week: pt.week, value: pt.value == null ? null : Number(pt.value) * 1000, id: pt.id };
+      });
+    }
+    return (
+      '<div class="compare-card">' +
+        '<div class="compare-card-head">' +
+          '<span class="compare-label">' + esc(metric.label) + "</span>" +
+          '<span class="compare-delta ' + esc(delta.cls) + '">' + esc(delta.arrow + " " + delta.text) + "</span>" +
+        "</div>" +
+        '<div class="compare-current">' + esc(formatCompareMetric(metric.key, curVal, ctx.current, pid)) + "</div>" +
+        '<div class="compare-prev">vs ' + esc(prevDisplay) +
+          (ctx.previousLabel ? " · " + esc(ctx.previousLabel) : "") + "</div>" +
+        (metric.target ? '<div class="compare-target">' + esc(metric.target) + "</div>" : "") +
+        '<div class="compare-spark">' + comparisonTrendChart(
+          trendPts,
+          metric.label,
+          metric.color || color,
+          metric.key === "messages" ? msgUnit : (metric.key === "latency" ? "s" : "%"),
+          105,
+          metric
+        ) + "</div>" +
+      "</div>"
+    );
+  }
+
+  function renderPlatformHistory(pid, pMeta, ctx) {
+    var histEl = document.getElementById("platHistory");
+    var grid = document.getElementById("platComparison");
+    if (!histEl || !ctx) return;
+
+    var cur = ctx.current || {};
+    var prev = ctx.previous || null;
+    var isMonth = ctx.mode === "month";
+    var periodLabel = isMonth ? (ctx.currentLabel || "Selected month") : (ctx.currentLabel || "Selected week");
+    var sourceNote = isMonth
+      ? ("Monthly Message Processed + WoW · " + (ctx.weekCount || 0) + " weeks")
+      : "Week Over Week Summary";
+
+    function deltaChip(metric) {
+      var d = computeComparisonDelta(
+        cur[metric.key],
+        prev ? prev[metric.key] : null,
+        metric.lowerBetter
+      );
+      return (
+        '<div class="hist-delta-card">' +
+          '<div class="lbl">' + esc(metric.label) + "</div>" +
+          '<div class="val">' + esc(formatCompareMetric(metric.key, cur[metric.key], cur, pid)) +
+            ' <span class="compare-delta ' + esc(d.cls) + '" style="margin-left:6px;">' +
+            esc(d.arrow + " " + d.text) + "</span></div>" +
+          '<div class="vs">vs ' +
+            esc(prev ? formatCompareMetric(metric.key, prev[metric.key], prev, pid) : "—") +
+            (ctx.previousLabel ? " · " + esc(ctx.previousLabel) : "") +
+          "</div>" +
+        "</div>"
+      );
+    }
+
+    var msgUnit = platformMsgUnit(pid);
+    var weeksTable = "";
+    if (isMonth) {
+      var weeks = weeksForMonth(ctx.currentLabel).slice().reverse();
+      if (weeks.length) {
+        weeksTable =
+          '<div class="hist-weeks-card">' +
+            "<h3>Weeks in " + esc(ctx.currentLabel) + ' <span class="cta">WoW Summary</span></h3>' +
+            '<div class="table-wrap"><table class="data"><thead><tr>' +
+              "<th>Week</th><th>Messages (" + esc(msgUnit) + ")</th><th>Success %</th><th>Failure %</th><th>Latency</th><th>Availability</th><th>Sev3</th>" +
+            "</tr></thead><tbody>" +
+            weeks.map(function (w) {
+              var p = (w.platforms && w.platforms[pid]) || {};
+              return "<tr><td>" + esc(w.label) + "</td><td>" +
+                esc(formatPlatformMsgs(pid, p.messages, true)) + "</td><td>" +
+                esc(formatPct(p.success)) + "</td><td>" +
+                esc(formatPct(p.failure)) + "</td><td>" +
+                esc(formatLatency(p.latencyRaw != null ? p.latencyRaw : p.latency)) + "</td><td>" +
+                esc(formatAvail(p.availabilityRaw != null ? p.availabilityRaw : p.availability)) + "</td><td>" +
+                esc(p.sev3 != null ? String(p.sev3) : "—") + "</td></tr>";
+            }).join("") +
+            "</tbody></table></div>" +
+          "</div>";
+      }
+    }
+
+    histEl.style.display = "";
+    histEl.innerHTML =
+      '<div class="hist-panel">' +
+        '<div class="hist-snapshot">' +
+          "<h3>" + esc(isMonth ? "Month snapshot" : "Week snapshot") +
+            ' <span class="cta">' + esc(periodLabel) + "</span></h3>" +
+          '<p class="snapshot-context" style="margin:0 0 10px;">' + esc(sourceNote) +
+            " · volumes in " + esc(msgUnit) + " · day-wise / KPIs only on current reporting week</p>" +
+          '<div class="hist-metrics">' +
+            '<div class="metric"><div class="n">' + esc(formatPlatformMsgs(pid, cur.messages, true)) + '</div><div class="l">Messages (' + esc(msgUnit) + ")</div></div>" +
+            '<div class="metric"><div class="n">' + esc(formatPct(cur.success)) + '</div><div class="l">Success %</div></div>' +
+            '<div class="metric"><div class="n">' + esc(formatPct(cur.failure)) + '</div><div class="l">Failure %</div></div>' +
+            '<div class="metric"><div class="n">' + esc(formatLatency(cur.latencyRaw != null ? cur.latencyRaw : cur.latency)) + '</div><div class="l">Latency</div></div>' +
+            '<div class="metric"><div class="n">' + esc(formatAvail(cur.availabilityRaw != null ? cur.availabilityRaw : cur.availability)) + '</div><div class="l">Availability</div></div>' +
+          "</div>" +
+          '<div class="hist-sev">' +
+            '<div class="metric"><div class="n">' + esc(cur.sev1 != null ? String(cur.sev1) : "—") + '</div><div class="l">Sev 1</div></div>' +
+            '<div class="metric"><div class="n">' + esc(cur.sev2 != null ? String(cur.sev2) : "—") + '</div><div class="l">Sev 2</div></div>' +
+            '<div class="metric"><div class="n">' + esc(cur.sev3 != null ? String(cur.sev3) : "—") + '</div><div class="l">Sev 3</div></div>' +
+          "</div>" +
+        "</div>" +
+        '<div class="hist-snapshot">' +
+          "<h3>" + esc(isMonth ? "vs previous month" : "vs previous week") + "</h3>" +
+          '<div class="hist-delta-row">' +
+            COMPARE_METRICS.map(deltaChip).join("") +
+          "</div>" +
+        "</div>" +
+        weeksTable +
+      "</div>";
+
+    if (grid) {
+      grid.style.display = "none";
+      grid.innerHTML = "";
+    }
+  }
+
+  function renderPlatformComparison(pid, pMeta, item) {
+    var ctx = getComparisonContext(pid);
+    var banner = document.getElementById("platCompareBanner");
+    var grid = document.getElementById("platComparison");
+    var histEl = document.getElementById("platHistory");
+    var integEl = document.getElementById("platIntegrations");
+    var legacyMetrics = document.getElementById("platMetrics");
+    if (!ctx || !banner || !grid) return false;
+
+    banner.style.display = "";
+    if (legacyMetrics) legacyMetrics.style.display = "none";
+
+    var showCurrentOnly = state.mode === "week" && isLatestWeek(currentWeek());
+
+    if (!showCurrentOnly) {
+      var modeLabel = ctx.mode === "month" ? "Historical month" : "Historical week";
+      var sub = ctx.mode === "month"
+        ? (esc(ctx.currentLabel) + " · " + (ctx.weekCount || 0) + " weeks · " + ctx.source)
+        : (esc(ctx.currentLabel) + (ctx.previousLabel ? " vs " + esc(ctx.previousLabel) : "") + " · " + ctx.source);
+      banner.innerHTML =
+        '<div class="compare-title">' + esc(modeLabel) + " · " + esc(ctx.currentLabel) + "</div>" +
+        '<div class="compare-sub">' + sub + "</div>";
+      renderPlatformHistory(pid, pMeta, ctx);
+      if (integEl) { integEl.style.display = "none"; integEl.innerHTML = ""; }
+      return true;
+    }
+
+    if (histEl) { histEl.style.display = "none"; histEl.innerHTML = ""; }
+    grid.style.display = "";
+
+    var modeLabel = "4-week performance trend";
+    var sub = "Selected " + ctx.currentLabel + " · compared with previous week · " + ctx.source;
+    banner.innerHTML =
+      '<div class="compare-title">' + esc(modeLabel) + "</div>" +
+      '<div class="compare-sub">' + esc(sub) + "</div>";
+
+    grid.innerHTML = COMPARE_METRICS.map(function (m) {
+      return renderComparisonCard(pid, m, ctx, pMeta.color);
+    }).join("");
+
+    if (integEl) {
+      integEl.style.display = "";
+      var integN = parseScaledCount(item.integrations);
+      var integVal = integN == null ? "—" : formatCount(integN);
+      var integLbl = (item.integrationsLabel === "API Processed")
+        ? "API processed"
+        : "Integrations running";
+      integEl.innerHTML =
+        '<div class="current-only-card">' +
+          '<div class="tag">Current · Summary of Insights</div>' +
+          '<div class="n">' + esc(integVal) + "</div>" +
+          '<div class="l">' + esc(integLbl) + " · not available historically in WoW sheet</div>" +
+        "</div>";
+    }
+    return true;
+  }
+
+  function renderPlatformKpis(pid) {
+    var kpis = state.kpis.filter(function (k) { return k.platformId === pid || matchPlatform(k.platform) === pid; });
+    document.getElementById("platKpis").innerHTML = kpis.length ? kpis.map(function (k) {
+      var a = assessKpi(k);
+      var statusText = String(k.status || "").trim() || "—";
+      return (
+        '<div class="kpi-tile">' +
+          '<div class="name">' + esc(k.kpi) + ' <span class="badge ' + a.state + '">' + esc(a.label) + "</span></div>" +
+          '<div class="kpi-desc">' + esc(statusText) + "</div>" +
+          kpiComparisonHtml(k, a) +
+          (k.date ? '<div class="kpi-meta" style="margin-top:7px;"><span>Action date <strong>' + esc(k.date) + "</strong></span></div>" : "") +
+          (k.action ? "<details class='mini'><summary>Action plan</summary><div class='body'>" + esc(k.action) + "</div></details>" : "") +
+        "</div>"
+      );
+    }).join("") : '<div class="empty">No KPIs mapped for this platform</div>';
+  }
+
+  function isLatestWeek(week) {
+    if (!week || !state.weeks.length) return false;
+    var latestId = pickLatestWeekId(state.weeks, state.exec && state.exec.period);
+    return week.id === latestId || week.id === state.weeks[state.weeks.length - 1].id;
+  }
+
+  function dailyForPlatform(pid) {
+    return (state.daily && state.daily.byPlatform && state.daily.byPlatform[pid]) || [];
+  }
+
+  function dailySummary(pid) {
+    return (state.daily && state.daily.summary && state.daily.summary[pid]) || null;
+  }
+
+  function renderHomeDaily() {
+    var el = document.getElementById("homeDaily");
+    if (!el) return;
+    if (!isLatestWeek(currentWeek())) {
+      el.innerHTML = '<div class="empty">Daily dashboard applies to the current reporting week (' + esc((state.exec && state.exec.period) || "latest") + ").</div>";
+      return;
+    }
+    if (!state.daily) {
+      el.innerHTML = '<div class="empty">No daily dashboard data</div>';
+      return;
+    }
+
+    // Prefer day-by-day rows when available; otherwise show week summary cards from Daily Performance Dashboard
+    if (state.daily.dates && state.daily.dates.length) {
+      var series = PLATFORMS.map(function (p) {
+        return {
+          name: p.name,
+          color: p.color,
+          unit: "M",
+          points: dailyForPlatform(p.id).map(function (d) {
+            return { week: d.label, value: d.messages != null ? d.messages / 1e6 : null };
+          }).filter(function (pt) { return pt.value != null; })
+        };
+      });
+      var range = state.daily.dates[0] + " → " + state.daily.dates[state.daily.dates.length - 1];
+      el.innerHTML =
+        '<h3 style="margin-bottom:8px;">Messages / day <span class="cta">' + esc(range) + ' · M</span></h3>' +
+        '<div class="chart-box" id="homeDailyChart">' + multiLineChart(series) + "</div>" +
+        '<div class="legend" id="homeDailyLegend">' + series.map(function (s) {
+          return '<button type="button"><i class="swatch" style="background:' + s.color + '"></i>' + esc(s.name) + "</button>";
+        }).join("") + "</div>" +
+        '<div class="table-wrap" style="margin-top:12px;"><table class="data"><thead><tr><th>Date</th>' +
+        PLATFORMS.map(function (p) { return "<th>" + esc(p.name) + " (M)</th>"; }).join("") +
+        "</tr></thead><tbody>" +
+        state.daily.dates.map(function (iso) {
+          return "<tr><td>" + esc(formatDayLabel(iso)) + "</td>" + PLATFORMS.map(function (p) {
+            var row = (dailyForPlatform(p.id).filter(function (d) { return d.date === iso; })[0]) || null;
+            return "<td>" + esc(row ? formatMsgsAbs(row.messages) : "—") + "</td>";
+          }).join("") + "</tr>";
+        }).join("") +
+        "</tbody></table></div>" +
+        '<p class="status-line" style="margin-top:8px;">From sheet · all volumes in millions (M)</p>';
+      bindChartInteractions(series);
+      return;
+    }
+
+    var period = (state.exec && state.exec.period) || "Current week";
+    var barSeries = [{
+      name: "Messages (M)",
+      color: "#DC291E",
+      unit: "M",
+      points: PLATFORMS.map(function (p) {
+        var s = dailySummary(p.id);
+        return { week: p.name, value: s && s.messages != null ? s.messages / 1e6 : null };
+      }).filter(function (pt) { return pt.value != null; })
+    }];
+    el.innerHTML =
+      '<h3 style="margin-bottom:8px;">Week totals <span class="cta">' + esc(period) + ' · M</span></h3>' +
+      '<div class="grid-4" style="margin-bottom:12px;">' + PLATFORMS.map(function (p) {
+        var s = dailySummary(p.id);
+        return '<div class="metric"><div class="n">' + esc(s ? formatMsgsAbs(s.messages) : "—") + '</div>' +
+          '<div class="l">' + esc(p.name) + '</div>' +
+          '<div class="l" style="margin-top:4px;">' + esc(s ? formatPct(s.success) : "—") + " success</div></div>";
+      }).join("") + "</div>" +
+      '<div class="chart-box" id="homeDailyChart">' + multiLineChart(barSeries, null, 200) + "</div>" +
+      '<div class="table-wrap" style="margin-top:12px;"><table class="data"><thead><tr><th>Platform</th><th>Messages (M)</th><th>Success %</th><th>Failure %</th><th>Detail</th></tr></thead><tbody>' +
+      PLATFORMS.map(function (p) {
+        var s = dailySummary(p.id);
+        var detail = "—";
+        if (s) {
+          if (p.id === "infolink") detail = "Int " + formatMsgsAbs(s.internal) + " · Ext " + formatMsgsAbs(s.external);
+          else if (p.id === "cpi") detail = "Success msgs " + formatMsgsAbs(s.successCount);
+          else detail = "Success msgs " + formatMsgsAbs(s.successCount);
+        }
+        return "<tr><td>" + esc(p.name) + "</td><td>" + esc(s ? formatMsgsAbs(s.messages) : "—") + "</td><td>" +
+          esc(s ? formatPct(s.success) : "—") + "</td><td>" + esc(s ? formatPct(s.failure) : "—") + "</td><td>" + esc(detail) + "</td></tr>";
+      }).join("") +
+      "</tbody></table></div>" +
+      '<p class="status-line" style="margin-top:8px;">From sheet tab <strong>Daily Performance Dashboard</strong></p>';
+    bindChartInteractions(barSeries);
+  }
+
+  function dailyOutcomeBarChart(rows, outcome, color, pid) {
+    var isSuccess = outcome === "success";
+    var name = isSuccess ? "Success" : "Failure";
+    var unit = platformMsgUnit(pid);
+    var points = rows.map(function (d) {
+      var raw = isSuccess ? d.successCount : d.failureCount;
+      return {
+        week: d.label,
+        value: toPlatformMsgValue(pid, raw, false),
+        total: toPlatformMsgValue(pid, d.messages, false),
+        successPct: d.success,
+        failurePct: d.failure,
+        msgUnit: unit
+      };
+    });
+    return registerChart([{
+      name: name,
+      color: color,
+      unit: unit,
+      points: points
+    }], 235, {
+      bar: true,
+      beginAtZero: true,
+      valueLabels: true,
+      dailyOutcome: true,
+      label: name + " messages by day"
+    });
+  }
+
+  function renderPlatDaily(pid) {
+    var el = document.getElementById("platDaily");
+    if (!el) return;
+    var week = currentWeek();
+    var period = (state.exec && state.exec.period) || (week ? week.label : "current week");
+    if (state.mode !== "week" || !isLatestWeek(week)) {
+      el.style.display = "none";
+      el.innerHTML = "";
+      return;
+    }
+    var rows = dailyForPlatform(pid);
+    var pMeta = PLATFORMS.filter(function (p) { return p.id === pid; })[0];
+    var weekHist = week && week.platforms ? (week.platforms[pid] || {}) : {};
+    var src = (state.daily && state.daily.source) || "Data tab";
+    if (rows.length) {
+      el.style.display = "";
+      var total = 0, successCount = 0, failureCount = 0;
+      rows.forEach(function (d) {
+        total += Number(d.messages) || 0;
+        successCount += Number(d.successCount) || 0;
+        failureCount += Number(d.failureCount) || 0;
+      });
+      var successNote = pid === "infolink"
+        ? "Success includes partial failure + duplicate"
+        : (pid === "cpi" ? "Total excludes discarded messages" : "Success messages");
+      var legendNote = pid === "infolink"
+        ? '<span style="font-weight:600;">Success = Success + Partial failure + Duplicate</span>'
+        : (pid === "cpi" ? '<span style="font-weight:600;">Total = Success + Failure · discarded excluded</span>' : "");
+      var msgUnit = platformMsgUnit(pid);
+      var uLabel = "(" + msgUnit + ")";
+      var tableHead = "<th>Date</th><th>Total " + uLabel + "</th><th>Success " + uLabel + "</th><th>Failure " + uLabel + "</th>" +
+        "<th>Success %</th><th>Failure %</th>";
+      var successColor = (getComputedStyle(document.documentElement).getPropertyValue("--success") || "#16A34A").trim();
+      var failureColor = (getComputedStyle(document.documentElement).getPropertyValue("--failure") || "#DC291E").trim();
+      el.innerHTML =
+        '<div class="daily-focus-head"><div>' +
+          "<h3>Current week · day-wise volume</h3>" +
+          '<div class="snapshot-context" style="margin:0;">' + esc(period) + " · " + esc(rows[0].date) + " → " + esc(rows[rows.length - 1].date) +
+            " · volumes in " + esc(msgUnit) + "</div>" +
+        '</div><span class="cta">' + esc(src) + "</span></div>" +
+        '<div class="daily-summary">' +
+          '<div class="metric"><div class="n">' + esc(formatPlatformMsgs(pid, total, false)) + '</div><div class="l">Total messages</div></div>' +
+          '<div class="metric"><div class="n">' + esc(formatPlatformMsgs(pid, successCount, false)) + '</div><div class="l">Success ' + esc(uLabel) + "</div></div>" +
+          '<div class="metric"><div class="n">' + esc(formatPlatformMsgs(pid, failureCount, false)) + '</div><div class="l">Failure ' + esc(uLabel) + "</div></div>" +
+          '<div class="metric"><div class="n">' + esc(formatLatency(weekHist.latencyRaw != null ? weekHist.latencyRaw : weekHist.latency)) + '</div><div class="l">Latency · WoW</div></div>' +
+          '<div class="metric"><div class="n">' + esc(formatAvail(weekHist.availabilityRaw != null ? weekHist.availabilityRaw : weekHist.availability)) + '</div><div class="l">Availability · WoW</div></div>' +
+        "</div>" +
+        '<div class="daily-chart-grid">' +
+          '<div class="daily-chart-panel"><h4>Success by day <span>own scale · ' + esc(msgUnit) + "</span></h4>" +
+            dailyOutcomeBarChart(rows, "success", successColor, pid) +
+          "</div>" +
+          '<div class="daily-chart-panel"><h4>Failure by day <span>own scale · ' + esc(msgUnit) + "</span></h4>" +
+            dailyOutcomeBarChart(rows, "failure", failureColor, pid) +
+          "</div>" +
+        "</div>" +
+        '<div class="daily-legend">' + legendNote + "</div>" +
+        '<p class="status-line" style="margin-top:8px;">Hover any day for totals and rates · ' + esc(successNote) + "</p>" +
+        '<div class="table-wrap" style="margin-top:12px;"><table class="data"><thead><tr>' +
+          tableHead +
+        "</tr></thead><tbody>" +
+        rows.map(function (d) {
+          return "<tr><td>" + esc(d.label) + " <span style=\"color:var(--arx-grey);font-size:11px;\">(" + esc(d.date) + ")</span></td><td>" +
+            esc(formatPlatformMsgs(pid, d.messages, false)) + "</td><td>" +
+            esc(formatPlatformMsgs(pid, d.successCount, false)) + "</td><td>" +
+            esc(formatPlatformMsgs(pid, d.failureCount, false)) + "</td><td>" +
+            esc(formatPct(d.success)) + "</td><td>" +
+            esc(formatPct(d.failure)) + "</td></tr>";
+        }).join("") +
+        "</tbody></table></div>" +
+        "<p class=\"status-line\" style=\"margin-top:8px;\">From sheet tab <strong>Data</strong> &middot; day-wise rows · Latency &amp; availability from <strong>Week Over Week Summary</strong></p>";
+      bindChartInteractions();
+      return;
+    }
+    var s = dailySummary(pid);
+    if (!s || s.messages == null) {
+      el.style.display = "";
+      el.innerHTML = '<h3>Current week · day-wise volume</h3><div class="empty">No day-wise rows in Data tab for this week</div>';
+      return;
+    }
+    el.style.display = "";
+    var msgUnit = platformMsgUnit(pid);
+    el.innerHTML =
+      "<h3>Week totals <span class=\"cta\">Daily Performance Dashboard · " + esc(period) + "</span></h3>" +
+      '<p class="snapshot-context">No day-wise rows found — showing week totals instead · volumes in ' + esc(msgUnit) + "</p>" +
+      '<div class="metric-row">' +
+        '<div class="metric"><div class="n">' + esc(formatPlatformMsgs(pid, s.messages, false)) + '</div><div class="l">Messages (' + esc(msgUnit) + ")</div></div>" +
+        '<div class="metric"><div class="n">' + esc(formatPct(s.success)) + '</div><div class="l">Success %</div></div>' +
+        '<div class="metric"><div class="n">' + esc(formatPct(s.failure)) + '</div><div class="l">Failure %</div></div>' +
+        '<div class="metric"><div class="n">' + esc(formatPlatformMsgs(pid, s.successCount, false)) + " / " + esc(formatPlatformMsgs(pid, s.failureCount, false)) + '</div><div class="l">Success / Failure (' + esc(msgUnit) + ")</div></div>" +
+      "</div>";
+  }
+
+  /* —— Charts (Chart.js 4, responsive + dark-mode aware) —— */
+  var chartSeq = 0;
+  var pendingCharts = {};
+  var chartInstances = {};
+
+  function chartColors() {
+    var css = getComputedStyle(document.documentElement);
+    return {
+      grid: (css.getPropertyValue("--chart-axis") || "#E2E8F0").trim(),
+      label: (css.getPropertyValue("--chart-label") || "#94A3B8").trim(),
+      tooltipBg: document.documentElement.getAttribute("data-theme") === "dark" ? "#F8FAFC" : "#0F172A",
+      tooltipFg: document.documentElement.getAttribute("data-theme") === "dark" ? "#0F172A" : "#F8FAFC"
+    };
+  }
+
+  function colorWithAlpha(color, alpha) {
+    var hex = String(color || "").replace("#", "");
+    if (/^[0-9a-f]{6}$/i.test(hex)) {
+      var r = parseInt(hex.slice(0, 2), 16);
+      var g = parseInt(hex.slice(2, 4), 16);
+      var b = parseInt(hex.slice(4, 6), 16);
+      return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+    }
+    return color;
+  }
+
+  function registerChart(seriesList, height, opts) {
+    opts = opts || {};
+    var visible = seriesList.filter(function (s) { return !state.chartHidden[s.name] && s.points && s.points.length; });
+    if (!visible.length) return '<div class="empty">No trend points — enable a series in the legend</div>';
+    var id = "chartjs-" + (++chartSeq);
+    pendingCharts[id] = { series: visible, height: height || 220, opts: opts };
+    return '<div class="chart-js-wrap" style="height:' + (height || 220) + 'px"><canvas id="' + id + '" aria-label="' + esc(opts.label || "Trend chart") + '" role="img"></canvas></div>';
+  }
+
+  function multiLineChart(seriesList, width, height) {
+    var isMultiVolume = seriesList.length > 1 && seriesList.every(function (s) { return s.unit === "M"; });
+    return registerChart(seriesList, height || 220, {
+      label: "Volume trend",
+      logarithmic: isMultiVolume
+    });
+  }
+
+  function sparkSVG(points, color) {
+    if (!points.length) return '<div class="empty">No history</div>';
+    return registerChart([{
+      name: "Messages",
+      color: color,
+      unit: "M",
+      points: points
+    }], 72, { spark: true, label: "Messages sparkline" });
+  }
+
+  function comparisonTrendChart(points, name, color, unit, height, metricOpts) {
+    if (!points.length) return '<div class="empty">No history</div>';
+    metricOpts = metricOpts || {};
+    return registerChart([{
+      name: name,
+      color: color,
+      unit: unit || "",
+      points: points
+    }], height || 150, {
+      trendLine: true,
+      valueLabels: true,
+      emphasizeLatest: true,
+      beginAtZero: !!metricOpts.beginAtZero,
+      axisMin: metricOpts.axisMin,
+      axisMax: metricOpts.axisMax,
+      suggestedMax: metricOpts.suggestedMax,
+      label: name + " comparison"
+    });
+  }
+
+  function dualRateBarChart(successPts, failurePts, height) {
+    var series = [
+      { name: "Success %", color: (getComputedStyle(document.documentElement).getPropertyValue("--success") || "#16A34A").trim(), unit: "%", points: successPts },
+      { name: "Failure %", color: (getComputedStyle(document.documentElement).getPropertyValue("--failure") || "#DC291E").trim(), unit: "%", points: failurePts }
+    ];
+    if (!successPts.length && !failurePts.length) return '<div class="empty">No success / failure history</div>';
+    return registerChart(series, height || 220, {
+      bar: true,
+      percentage: true,
+      label: "Success and failure comparison"
+    });
+  }
+
+  function dualRateChart(successPts, failurePts, width, height) {
+    var series = [
+      { name: "Success %", color: (getComputedStyle(document.documentElement).getPropertyValue("--success") || "#16A34A").trim(), unit: "%", points: successPts },
+      { name: "Failure %", color: (getComputedStyle(document.documentElement).getPropertyValue("--failure") || "#DC291E").trim(), unit: "%", points: failurePts }
+    ];
+    if (!successPts.length && !failurePts.length) return '<div class="empty">No success / failure history</div>';
+    return registerChart(series, height || 220, { percentage: true, label: "Success and failure trend" });
+  }
+
+  function mountPendingCharts() {
+    Object.keys(chartInstances).forEach(function (id) {
+      var instance = chartInstances[id];
+      if (!instance || !instance.canvas || !document.body.contains(instance.canvas)) {
+        if (instance) instance.destroy();
+        delete chartInstances[id];
+      }
+    });
+
+    Object.keys(pendingCharts).forEach(function (id) {
+      var canvas = document.getElementById(id);
+      if (!canvas || chartInstances[id]) return;
+      var spec = pendingCharts[id];
+      var colors = chartColors();
+      var labels = [];
+      spec.series.forEach(function (s) {
+        s.points.forEach(function (p) {
+          if (labels.indexOf(p.week) < 0) labels.push(p.week);
+        });
+      });
+      var lastActualIndex = -1;
+      if (spec.opts.stock && spec.series[0]) {
+        for (var li = spec.series[0].points.length - 1; li >= 0; li--) {
+          if (spec.series[0].points[li].raw != null || spec.series[0].points[li].value != null) {
+            lastActualIndex = labels.indexOf(spec.series[0].points[li].week);
+            break;
+          }
+        }
+      }
+      var datasets = spec.series.map(function (s) {
+        var lookup = {};
+        s.points.forEach(function (p) { lookup[p.week] = p.value; });
+        return {
+          type: s.type || undefined,
+          label: s.name,
+          data: labels.map(function (label) { return lookup[label] == null ? null : lookup[label]; }),
+          borderColor: spec.opts.emphasizeLatest && !spec.opts.trendLine
+            ? labels.map(function (_, idx) { return idx === labels.length - 1 ? s.color : colorWithAlpha(s.color, .38); })
+            : s.color,
+          backgroundColor: spec.opts.trendLine
+            ? colorWithAlpha(s.color, .10)
+            : (spec.opts.emphasizeLatest
+            ? labels.map(function (_, idx) { return idx === labels.length - 1 ? s.color : colorWithAlpha(s.color, .28); })
+            : s.color),
+          pointBackgroundColor: spec.opts.trendLine
+            ? labels.map(function (_, idx) {
+                return idx === labels.length - 1 ? s.color : colorWithAlpha(s.color, .55);
+              })
+            : s.color,
+          pointBorderColor: s.color,
+          pointBorderWidth: spec.opts.spark ? 0 : 2,
+          pointRadius: spec.opts.stock
+            ? function (ctx) { return ctx.dataIndex === lastActualIndex ? 3 : 0; }
+            : (spec.opts.spark ? 0 : (spec.opts.trendLine
+              ? function (ctx) { return ctx.dataIndex === labels.length - 1 ? 5 : 3; }
+              : 3)),
+          pointHoverRadius: spec.opts.spark ? 3 : 5,
+          borderWidth: (spec.opts.dailyMixed && s.type === "bar") ? 0 : (spec.opts.spark ? 2 : (spec.opts.stock ? 2 : 2.5)),
+          tension: spec.opts.stock ? 0.28 : (spec.opts.trendLine ? 0.22 : 0.34),
+          cubicInterpolationMode: "monotone",
+          spanGaps: !spec.opts.stock,
+          fill: !!spec.opts.trendLine,
+          borderRadius: (spec.opts.bar || (spec.opts.dailyMixed && s.type === "bar")) ? 6 : 0,
+          borderSkipped: false,
+          barPercentage: (spec.opts.bar || spec.opts.dailyMixed) ? 0.72 : undefined,
+          categoryPercentage: (spec.opts.bar || spec.opts.dailyMixed) ? 0.72 : undefined,
+          unit: s.unit || "",
+          yAxisID: s.yAxisID || "y",
+          stack: s.stack || undefined,
+          order: s.type === "line" ? 0 : 1
+        };
+      });
+
+      if (typeof Chart === "undefined") {
+        canvas.parentNode.innerHTML = '<div class="empty">Chart library could not load. Check internet access.</div>';
+        return;
+      }
+
+      var stockScales = null;
+      if (spec.opts.stock) {
+        stockScales = {
+          x: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              display: true,
+              color: colors.label,
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 12,
+              padding: 6,
+              font: { size: 9 }
+            }
+          },
+          y: {
+            display: true,
+            min: 0,
+            max: 100,
+            grid: {
+              color: colors.grid,
+              drawTicks: false,
+              lineWidth: function (ctx) {
+                return (ctx.tick.value === 34 || ctx.tick.value === 66) ? 1 : 0;
+              }
+            },
+            border: { display: false },
+            ticks: { display: false, stepSize: 2 }
+          }
+        };
+      }
+
+      var stockEndLabels = {
+        id: "stockEndLabels-" + id,
+        afterDatasetsDraw: function (chart) {
+          if (!spec.opts.stock || lastActualIndex < 0) return;
+          var ctx = chart.ctx;
+          var themeBg = document.documentElement.getAttribute("data-theme") === "dark" ? "#161922" : "#FFFFFF";
+          ctx.save();
+          ctx.font = '700 9px "IBM Plex Sans", sans-serif';
+          ctx.textBaseline = "middle";
+          ctx.lineJoin = "round";
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = themeBg;
+          chart.data.datasets.forEach(function (dataset, datasetIndex) {
+            var pointEl = chart.getDatasetMeta(datasetIndex).data[lastActualIndex];
+            var source = spec.series[datasetIndex] || {};
+            var point = source.points[lastActualIndex] || {};
+            if (!pointEl || point.skip || point.raw == null) return;
+            var label = source.metric === "latency"
+              ? formatLatency(point.raw)
+              : formatLiveCount(point.raw);
+            var x = pointEl.x + 7;
+            var y = pointEl.y;
+            ctx.strokeText(label, x, y);
+            ctx.fillStyle = source.color || dataset.borderColor;
+            ctx.fillText(label, x, y);
+          });
+          ctx.restore();
+        }
+      };
+
+      var barValueLabels = {
+        id: "barValueLabels-" + id,
+        afterDatasetsDraw: function (chart) {
+          if (!spec.opts.valueLabels) return;
+          var ctx = chart.ctx;
+          var themeBg = document.documentElement.getAttribute("data-theme") === "dark" ? "#161922" : "#FFFFFF";
+          ctx.save();
+          ctx.font = '700 9px "IBM Plex Sans", sans-serif';
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = themeBg;
+          chart.data.datasets.forEach(function (dataset, datasetIndex) {
+            var source = spec.series[datasetIndex] || {};
+            chart.getDatasetMeta(datasetIndex).data.forEach(function (el, index) {
+              var value = dataset.data[index];
+              if (value == null || !el) return;
+              var label = formatSeriesValue(source, value);
+              ctx.strokeText(label, el.x, el.y - 5);
+              ctx.fillStyle = source.color || dataset.backgroundColor;
+              ctx.fillText(label, el.x, el.y - 5);
+            });
+          });
+          ctx.restore();
+        }
+      };
+
+      var barScales = spec.opts.bar ? {
+        x: {
+          display: true,
+          grid: { display: false },
+          border: { display: false },
+          ticks: {
+            color: function (ctx) {
+              if (!spec.opts.emphasizeLatest || ctx.index !== labels.length - 1) return colors.label;
+              return (spec.series[0] && spec.series[0].color) || colors.label;
+            },
+            maxRotation: 0,
+            autoSkip: false,
+            font: { size: spec.opts.compactBar ? 8 : 10 },
+            callback: function (value) {
+              var label = this.getLabelForValue(value);
+              if (!spec.opts.compactBar) return label;
+              return String(label).replace(/\s+/g, " ").split("-")[0].trim();
+            }
+          }
+        },
+        y: {
+          display: !spec.opts.compactBar,
+          beginAtZero: !!spec.opts.beginAtZero,
+          min: spec.opts.axisMin != null ? spec.opts.axisMin : undefined,
+          max: spec.opts.axisMax != null ? spec.opts.axisMax : undefined,
+          suggestedMax: spec.opts.suggestedMax != null ? spec.opts.suggestedMax : undefined,
+          grid: { color: colors.grid, drawTicks: false },
+          border: { display: false },
+          ticks: {
+            color: colors.label,
+            padding: 8,
+            font: { size: 10 },
+            callback: function (value) {
+              var unit = (spec.series[0] && spec.series[0].unit) || "";
+              return unit ? value + " " + unit : value;
+            }
+          }
+        }
+      } : null;
+
+      var dailyScales = spec.opts.dailyMixed ? {
+        x: {
+          stacked: true,
+          grid: { display: false },
+          border: { display: false },
+          ticks: { color: colors.label, maxRotation: 0, autoSkip: false, font: { size: 10 } }
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          grid: { color: colors.grid, drawTicks: false },
+          border: { display: false },
+          title: { display: true, text: "Messages (M)", color: colors.label, font: { size: 10, weight: "bold" } },
+          ticks: {
+            color: colors.label,
+            callback: function (value) { return value + " M"; },
+            font: { size: 10 }
+          }
+        }
+      } : null;
+
+      var trendScales = spec.opts.trendLine ? {
+        x: {
+          grid: { display: false },
+          border: { display: false },
+          ticks: {
+            color: function (ctx) {
+              return ctx.index === labels.length - 1
+                ? ((spec.series[0] && spec.series[0].color) || colors.label)
+                : colors.label;
+            },
+            maxRotation: 0,
+            autoSkip: false,
+            font: { size: 8 },
+            callback: function (value) {
+              return String(this.getLabelForValue(value)).replace(/\s+/g, " ").split("-")[0].trim();
+            }
+          }
+        },
+        y: {
+          display: false,
+          beginAtZero: !!spec.opts.beginAtZero,
+          min: spec.opts.axisMin != null ? spec.opts.axisMin : undefined,
+          max: spec.opts.axisMax != null ? spec.opts.axisMax : undefined,
+          suggestedMax: spec.opts.suggestedMax != null ? spec.opts.suggestedMax : undefined
+        }
+      } : null;
+
+      chartInstances[id] = new Chart(canvas.getContext("2d"), {
+        type: (spec.opts.bar || spec.opts.dailyMixed) ? "bar" : "line",
+        data: { labels: labels, datasets: datasets },
+        plugins: spec.opts.stock ? [stockEndLabels] : (spec.opts.valueLabels ? [barValueLabels] : []),
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: spec.opts.stock
+              ? { right: 42 }
+              : (spec.opts.valueLabels ? { top: 16 } : 0)
+          },
+          animation: { duration: 450, easing: "easeOutQuart" },
+          interaction: { mode: "index", intersect: false },
+          normalized: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: !spec.opts.spark,
+              backgroundColor: colors.tooltipBg,
+              titleColor: colors.tooltipFg,
+              bodyColor: colors.tooltipFg,
+              padding: 12,
+              cornerRadius: 10,
+              displayColors: true,
+              callbacks: {
+                beforeBody: function (items) {
+                  if (!items.length) return;
+                  var source = spec.series[items[0].datasetIndex] || {};
+                  var point = source.points[items[0].dataIndex] || {};
+                  if (spec.opts.dailyMixed || spec.opts.dailyOutcome) {
+                    var lines = [];
+                    if (point.total != null) {
+                      lines.push("Total messages: " + formatSeriesValue(source, point.total));
+                    }
+                    if (point.successPct != null) lines.push("Success %: " + formatPct(point.successPct));
+                    if (point.failurePct != null) lines.push("Failure %: " + formatPct(point.failurePct));
+                    return lines.length ? lines : undefined;
+                  }
+                  if (!spec.opts.stock) return;
+                  if (point.total == null) return;
+                  return "Total: " + formatLiveCount(point.total);
+                },
+                label: function (ctx) {
+                  var source = spec.series[ctx.datasetIndex] || {};
+                  if (spec.opts.stock) {
+                    var point = source.points[ctx.dataIndex] || {};
+                    var raw = point.raw != null ? point.raw : ctx.parsed.y;
+                    if (source.metric === "latency") return " " + source.name + ": " + formatLatency(raw);
+                    return " " + source.name + ": " + formatLiveCount(raw);
+                  }
+                  return " " + ctx.dataset.label + ": " + formatSeriesValue(source, ctx.parsed.y);
+                }
+              }
+            }
+          },
+          scales: dailyScales || trendScales || barScales || (spec.opts.spark ? {
+            x: { display: false },
+            y: { display: false }
+          } : stockScales ? stockScales : {
+            x: {
+              grid: { display: false },
+              border: { display: false },
+              ticks: { color: colors.label, maxRotation: 0, autoSkip: true, maxTicksLimit: 7, font: { size: 10 } }
+            },
+            y: {
+              type: spec.opts.logarithmic ? "logarithmic" : "linear",
+              beginAtZero: !!spec.opts.percentage,
+              min: spec.opts.percentage ? 0 : undefined,
+              max: spec.opts.percentage ? 100 : undefined,
+              grid: { color: colors.grid, drawTicks: false },
+              border: { display: false },
+              ticks: {
+                color: colors.label,
+                padding: 8,
+                font: { size: 10 },
+                callback: function (value) {
+                  var unit = (spec.series[0] && spec.series[0].unit) || "";
+                  if (unit === "%") return value + "%";
+                  if (unit === "M") return value + " M";
+                  if (unit === "K") return value + " K";
+                  return value;
+                }
+              }
+            }
+          })
+        }
+      });
+      delete pendingCharts[id];
+    });
+  }
+
+  function bindChartInteractions() {
+    requestAnimationFrame(mountPendingCharts);
+  }
+
+  function bindPlatRateChart() {
+    requestAnimationFrame(mountPendingCharts);
+  }
+
+  /* —— Renderers —— */
+  function fillPeriodSelect() {
+    var sel = document.getElementById("periodSelect");
+    var html = "";
+    if (state.mode === "week") {
+      var latestId = pickLatestWeekId(state.weeks, state.exec && state.exec.period);
+      // Newest first in the dropdown
+      state.weeks.slice().reverse().forEach(function (w, idx, arr) {
+        var isLatest = latestId ? w.id === latestId : idx === 0;
+        var selected = (state.selectedWeekId || latestId || (arr[0] && arr[0].id)) === w.id ? " selected" : "";
+        html += '<option value="' + esc(w.id) + '"' + selected + ">" + esc(w.label) + (isLatest ? " (latest)" : "") + "</option>";
+      });
+    } else {
+      state.months.forEach(function (m, idx) {
+        var selected = (state.selectedMonth || state.months[0]) === m ? " selected" : "";
+        html += '<option value="' + esc(m) + '"' + selected + ">" + esc(m) + "</option>";
+      });
+    }
+    sel.innerHTML = html || '<option>No history</option>';
+  }
+
+  function parseScaledCount(raw) {
+    if (raw == null || raw === "" || raw === "—" || raw === "-") return null;
+    if (typeof raw === "number") return raw;
+    var s = String(raw).trim();
+    var n = firstNumber(s);
+    if (n == null) return null;
+    if (/\bM\b|million/i.test(s)) return n * 1e6;
+    if (/\bK\b|thousand/i.test(s)) return n * 1e3;
+    return n;
+  }
+
+  function updateCommand() {
+    var s = state.exec || {};
+    var week = currentWeek();
+    // Period follows the History selector (not the static sheet "Reporting Period" row)
+    var period = "—";
+    if (state.mode === "month") {
+      period = state.selectedMonth || "—";
+    } else if (week) {
+      period = isLatestWeek(week) && s.period ? s.period : week.label;
+    } else if (s.period) {
+      period = s.period;
+    }
+    var okCount = 0;
+    var watchNotes = [];
+    var titleLines = [];
+    PLATFORMS.forEach(function (p) {
+      var detail = platformHealthDetail(p.id);
+      if (detail.cls === "green") okCount++;
+      else if (detail.cls === "yellow" || detail.cls === "red") {
+        var label = detail.cls === "red" ? "Issue" : "Watch";
+        var line = detail.name + (detail.reason ? " · " + detail.reason : "");
+        watchNotes.push({ label: label, cls: detail.cls === "red" ? "issue" : "watch", text: line });
+        titleLines.push(label + ": " + line);
+      } else {
+        titleLines.push(detail.name + ": no weekly metrics");
+      }
+    });
+    var criteriaText = "Green criteria: Failure ≤ 3%, Success ≥ 97%, and no Sev1 or Sev2.";
+    var tipHtml = "<strong>Healthy Platforms</strong>" +
+      '<div class="tip-line">' + esc(criteriaText) + "</div>";
+    if (okCount === 4) {
+      tipHtml += '<div class="tip-line">All 4 platforms are green for the selected period.</div>';
+    } else {
+      tipHtml += watchNotes.map(function (n) {
+        return '<div class="tip-line ' + n.cls + '">' + esc(n.label + ": " + n.text) + "</div>";
+      }).join("");
+    }
+    var tickets = state.tickets && state.tickets.totals ? state.tickets.totals.tickets : "—";
+
+    var platName = (PLATFORMS.filter(function (p) { return p.id === state.view; })[0] || {}).name;
+    document.getElementById("commandTitle").innerHTML =
+      state.view === "home"
+        ? "Integration <em>status</em>"
+        : (state.view === "tickets"
+          ? "Ticket <em>desk</em>"
+          : (state.view === "bu" ? "Regional <em>tasks</em>" : esc(platName || state.view)));
+    document.getElementById("commandSub").textContent =
+      state.view === "bu"
+        ? "Latest integration tasks by Freight, GCC, and Express"
+        : (state.mode === "month"
+          ? ("Browsing " + (state.selectedMonth || "—"))
+          : ("Week of " + (week ? week.label : "—")));
+
+    document.getElementById("commandStats").innerHTML =
+      '<div class="cstat"><div class="lbl">Period</div><div class="val">' + esc(period) + "</div></div>" +
+      '<div class="cstat"><div class="lbl">Healthy Platforms <span class="info-icon" tabindex="0" aria-label="Healthy platforms info">i<span class="info-tip">' +
+      tipHtml + '</span></span></div><div class="val">' +
+      okCount + " / 4</div></div>" +
+      '<div class="cstat"><div class="lbl">Total tickets</div><div class="val red">' + esc(String(tickets)) + "</div></div>";
+
+    bindInfoTips();
+
+    document.getElementById("periodHint") && (document.getElementById("periodHint").textContent =
+      state.mode === "week"
+        ? ((week ? week.label : "—") + " · " + state.weeks.length + " weeks")
+        : ((state.selectedMonth || "—") + " · " + weeksInScope().length + " weeks"));
+  }
+
+  function bindInfoTips() {
+    var icons = document.querySelectorAll("#commandStats .info-icon");
+    if (!icons.length) return;
+    var portal = document.getElementById("healthInfoPop");
+    if (!portal) {
+      portal = document.createElement("div");
+      portal.id = "healthInfoPop";
+      portal.setAttribute("role", "tooltip");
+      document.body.appendChild(portal);
+    } else if (portal.parentNode !== document.body) {
+      document.body.appendChild(portal);
+    }
+    document.body.appendChild(portal);
+
+    function hide() {
+      portal.classList.remove("is-open");
+    }
+
+    icons.forEach(function (icon) {
+      var source = icon.querySelector(".info-tip");
+      if (!source) return;
+      var hostCard = icon.closest(".cstat");
+      function place() {
+        document.body.appendChild(portal);
+        portal.innerHTML = source.innerHTML;
+        var anchor = hostCard || icon;
+        var rect = anchor.getBoundingClientRect();
+        var tipW = Math.min(280, window.innerWidth - 24);
+        var left = Math.max(12, Math.min(rect.left, window.innerWidth - tipW - 12));
+        var top = rect.bottom + 8;
+        portal.style.left = left + "px";
+        portal.style.top = top + "px";
+        portal.style.width = tipW + "px";
+        portal.classList.add("is-open");
+      }
+      icon.onmouseenter = place;
+      icon.onmouseleave = hide;
+      icon.onfocus = place;
+      icon.onblur = hide;
+    });
+  }
+
+  function renderHome() {
+    var s = state.exec || { items: {}, health: {} };
+    var week = currentWeek();
+    var isLatest = isLatestWeek(week);
+    var isMonth = state.mode === "month";
+    document.getElementById("homePlatforms").innerHTML = PLATFORMS.map(function (p) {
+      var item = (s.items && s.items[p.id]) || {};
+      var hist = week && week.platforms[p.id] ? week.platforms[p.id] : null;
+      var monthly = isMonth ? monthlySnapshot(p.id) : null;
+      var msgM = null;
+      var success = null;
+      var blurb = "";
+
+      if (isMonth) {
+        var wowM = wowMonthSnapshot(p.id);
+        msgM = monthly && monthly.messages != null
+          ? monthly.messages
+          : (wowM && wowM.messages != null ? wowM.messages : null);
+        var sucRaw = monthly && monthly.success != null
+          ? monthly.success
+          : (wowM && wowM.success != null ? wowM.success : null);
+        var failRaw = monthly && monthly.failure != null
+          ? monthly.failure
+          : (wowM && wowM.failure != null ? wowM.failure : null);
+        success = formatPct(sucRaw);
+        if (monthly || wowM) {
+          var src = monthly && wowM
+            ? "Monthly + WoW (" + (wowM.weekCount || 0) + " wks)"
+            : (monthly ? "Monthly Message Processed" : ("WoW · " + (wowM.weekCount || 0) + " weeks"));
+          var sevBit = wowM
+            ? (" · Sev1 " + (wowM.sev1 != null ? wowM.sev1 : 0) + " · Sev2 " + (wowM.sev2 != null ? wowM.sev2 : 0))
+            : "";
+          blurb = "Success " + formatPct(sucRaw) + " · Fail " + formatPct(failRaw) + sevBit + " · " + src;
+        } else {
+          blurb = "No monthly / WoW data for this month";
+        }
+      } else {
+        msgM = hist && hist.messages != null
+          ? hist.messages
+          : (isLatest ? parseMsgsToMillions(item.messages) : null);
+        success = formatPct(hist && hist.success != null ? hist.success : null);
+        var risk = (isLatest ? (item.risks || "") : "").trim();
+        var riskEmpty = !risk || risk === "-" || risk === "—";
+        blurb = isLatest
+          ? (riskEmpty ? (item.highlights || "Stable") : risk)
+          : (hist
+            ? ("Success " + formatPct(hist.success) + " · Fail " + formatPct(hist.failure) +
+              " · Sev3 " + (hist.sev3 != null ? hist.sev3 : "—"))
+            : "No history for this week");
+      }
+
+      var msg = formatPlatformMsgs(p.id, msgM, true);
+      // Integrations / API processed come from Summary of Insights and stay fixed across History weeks/months
+      var integN = parseScaledCount(item.integrations);
+      var integVal = integN == null ? "—" : formatCount(integN);
+      var integLbl = (item.integrationsLabel === "API Processed")
+        ? "API processed"
+        : "Integrations running";
+      var riskText = !isMonth && isLatest ? (item.risks || "").trim() : "";
+      var riskEmptyText = !riskText || riskText === "-" || riskText === "—";
+      var hc = periodHealth(p.id);
+      return (
+        '<div class="card clickable health-' + hc + '" data-jump="' + p.id + '">' +
+          "<h3><span>" + esc(p.name) + "</span>" + healthDot(p.id) + "</h3>" +
+          '<div class="metric-row cols-3">' +
+            '<div class="metric"><div class="n">' + esc(msg) + '</div><div class="l">Messages (' + esc(platformMsgUnit(p.id)) + ")</div></div>" +
+            '<div class="metric"><div class="n">' + esc(success) + '</div><div class="l">Success %</div></div>' +
+            '<div class="metric"><div class="n">' + esc(integVal) + '</div><div class="l">' + esc(integLbl) + "</div></div>" +
+          "</div>" +
+          '<div class="' + (isMonth || !isLatest || riskEmptyText ? "ok-text" : "risk") + '">' + esc(blurb) + "</div>" +
+          '<div class="cta" style="margin-top:10px;">Open platform →</div>' +
+        "</div>"
+      );
+    }).join("");
+
+    renderHomeHourly();
+    stamp("homeStatus");
+  }
+
+  function renderPlatform(pid) {
+    var pMeta = PLATFORMS.filter(function (p) { return p.id === pid; })[0];
+    if (!pMeta) return;
+    var s = state.exec || { items: {}, health: {} };
+    var item = (s.items && s.items[pid]) || {};
+    var week = currentWeek();
+    var hist = week && week.platforms[pid] ? week.platforms[pid] : {};
+    var useComparison = pid === "infolink" || pid === "boomi" || pid === "cpi";
+    var isMonth = state.mode === "month";
+
+    document.getElementById("platLabel").textContent = isMonth
+      ? ("Platform · " + (state.selectedMonth || "—"))
+      : ("Platform · " + (week ? week.label : "—"));
+    document.getElementById("platTitle").innerHTML = esc(pMeta.name) + " " + healthDot(pid);
+
+    var btnPrev = document.getElementById("btnPrevWeek");
+    var btnNext = document.getElementById("btnNextWeek");
+    if (btnPrev) btnPrev.style.display = isMonth ? "none" : "";
+    if (btnNext) btnNext.style.display = isMonth ? "none" : "";
+
+    if (useComparison) {
+      renderPlatformComparison(pid, pMeta, item);
+    } else {
+      var banner = document.getElementById("platCompareBanner");
+      var grid = document.getElementById("platComparison");
+      var histEl = document.getElementById("platHistory");
+      var integEl = document.getElementById("platIntegrations");
+      var legacyMetrics = document.getElementById("platMetrics");
+      if (banner) banner.style.display = "none";
+      if (grid) grid.style.display = "none";
+      if (histEl) { histEl.style.display = "none"; histEl.innerHTML = ""; }
+      if (integEl) integEl.style.display = "none";
+      if (legacyMetrics) legacyMetrics.style.display = "";
+
+      var msgDisplay = hist.messages != null
+        ? formatMsgsM(hist.messages)
+        : formatMsgsM(parseMsgsToMillions(item.messages || hist.messagesRaw));
+      legacyMetrics.innerHTML =
+        '<div class="card"><h3>Messages</h3><div class="metric"><div class="n">' + esc(msgDisplay) + '</div><div class="l">Processed (M)</div></div></div>' +
+        '<div class="card"><h3>Success / Failure</h3><div class="metric-row"><div class="metric"><div class="n">' + esc(formatPct(hist.success)) + '</div><div class="l">Success %</div></div><div class="metric"><div class="n">' + esc(formatPct(hist.failure)) + '</div><div class="l">Failure %</div></div></div></div>' +
+        '<div class="card"><h3>Latency · Availability</h3><div class="metric-row"><div class="metric"><div class="n">' + esc(formatLatency(hist.latencyRaw != null ? hist.latencyRaw : hist.latency)) + '</div><div class="l">Latency</div></div><div class="metric"><div class="n">' + esc(formatAvail(hist.availabilityRaw != null ? hist.availabilityRaw : hist.availability)) + '</div><div class="l">Availability %</div></div></div></div>';
+    }
+
+    renderPlatDaily(pid);
+
+    var showCurrentOnly = useComparison
+      ? (state.mode === "week" && isLatestWeek(week))
+      : true;
+    var currentOnly = document.getElementById("platCurrentOnly");
+    if (currentOnly) currentOnly.style.display = showCurrentOnly ? "" : "none";
+
+    if (useComparison && showCurrentOnly) {
+      renderPlatformKpis(pid);
+      var risk = (item.risks || "").trim();
+      var riskEmpty = !risk || risk === "-" || risk === "—";
+      document.getElementById("platNarrative").innerHTML =
+        "<h3>Highlights &amp; risks</h3>" +
+        '<div class="metric" style="margin-top:8px;"><div class="l">Highlights</div><div style="font-size:13px;margin-top:4px;">' + esc(item.highlights || "—") + "</div></div>" +
+        '<div class="metric" style="margin-top:8px;"><div class="l">Risks</div><div class="' + (riskEmpty ? "ok-text" : "risk") + '" style="margin-top:4px;">' + esc(riskEmpty ? "None reported" : risk) + "</div></div>" +
+        (s.leadership && s.leadership !== "-" ? '<div class="metric" style="margin-top:8px;"><div class="l">Leadership attention</div><div class="risk" style="margin-top:4px;">' + esc(s.leadership) + "</div></div>" : "");
+    } else if (!useComparison) {
+      var kpis = state.kpis.filter(function (k) { return k.platformId === pid || matchPlatform(k.platform) === pid; });
+      document.getElementById("platKpis").innerHTML = kpis.length ? kpis.map(function (k) {
+        var a = assessKpi(k);
+        return (
+          '<div class="kpi-tile">' +
+            '<div class="name">' + esc(k.kpi) + ' <span class="badge ' + a.state + '">' + esc(a.label) + "</span></div>" +
+            '<div class="kpi-desc">' + esc(String(k.status || "").trim() || "—") + "</div>" +
+            kpiComparisonHtml(k, a) +
+            (k.action ? "<details class='mini'><summary>Action plan</summary><div class='body'>" + esc(k.action) + "</div></details>" : "") +
+          "</div>"
+        );
+      }).join("") : '<div class="empty">No KPIs mapped for this platform</div>';
+
+      var risk = (item.risks || "").trim();
+      var riskEmpty = !risk || risk === "-" || risk === "—";
+      document.getElementById("platNarrative").innerHTML =
+        "<h3>Highlights &amp; risks</h3>" +
+        '<div class="metric" style="margin-top:8px;"><div class="l">Highlights</div><div style="font-size:13px;margin-top:4px;">' + esc(item.highlights || "—") + "</div></div>" +
+        '<div class="metric" style="margin-top:8px;"><div class="l">Risks</div><div class="' + (riskEmpty ? "ok-text" : "risk") + '" style="margin-top:4px;">' + esc(riskEmpty ? "None reported" : risk) + "</div></div>" +
+        (s.leadership && s.leadership !== "-" ? '<div class="metric" style="margin-top:8px;"><div class="l">Leadership attention</div><div class="risk" style="margin-top:4px;">' + esc(s.leadership) + "</div></div>" : "");
+    }
+
+    stamp("platStatus");
+  }
+
+  function renderTickets() {
+    var t = state.tickets;
+    if (!t) {
+      document.getElementById("ticketStats").innerHTML = '<div class="empty">No tickets</div>';
+      return;
+    }
+    var tot = t.totals;
+    document.getElementById("ticketStats").innerHTML =
+      [["Total tickets", tot.tickets], ["In Progress", tot.inProgress], ["Closed", tot.closed], ["Unassigned", tot.unassigned != null ? tot.unassigned : 0]].map(function (x) {
+        return '<div class="card"><div class="metric"><div class="n">' + esc(String(x[1])) + '</div><div class="l">' + esc(x[0]) + "</div></div></div>";
+      }).join("");
+
+    var rows = ['<div class="member-row header"><div>Member</div><div class="val">Total tickets</div><div class="val">In Progress</div><div class="val">Closed</div></div>'];
+    t.members.forEach(function (m) {
+      rows.push(
+        '<div class="member-row"><div>' + esc(m.name) + "</div>" +
+        '<div class="val" data-label="Total tickets: ">' + esc(m.tickets) + "</div>" +
+        '<div class="val" data-label="In Progress: ">' + esc(m.inProgress) + "</div>" +
+        '<div class="val" data-label="Closed: ">' + esc(m.closed) + "</div></div>"
+      );
+    });
+    rows.push(
+      '<div class="member-row total"><div>Grand Total</div>' +
+      '<div class="val" data-label="Total tickets: ">' + esc(String(tot.tickets)) + "</div>" +
+      '<div class="val" data-label="In Progress: ">' + esc(String(tot.inProgress)) + "</div>" +
+      '<div class="val" data-label="Closed: ">' + esc(String(tot.closed)) + "</div></div>"
+    );
+    document.getElementById("ticketMembers").innerHTML = rows.join("");
+    stamp("ticketStatus");
+  }
+
+  function setView(view) {
+    state.view = view;
+    document.querySelectorAll(".nav-tab").forEach(function (t) {
+      t.classList.toggle("active", t.getAttribute("data-view") === view || (view !== "home" && view !== "tickets" && t.getAttribute("data-view") === view));
+    });
+    // highlight platform tabs
+    document.querySelectorAll(".nav-tab").forEach(function (t) {
+      var v = t.getAttribute("data-view");
+      t.classList.toggle("active", v === view);
+    });
+
+    document.getElementById("view-home").classList.toggle("active", view === "home");
+    document.getElementById("view-tickets").classList.toggle("active", view === "tickets");
+    document.getElementById("view-bu").classList.toggle("active", view === "bu");
+    document.getElementById("view-platform").classList.toggle("active",
+      view !== "home" && view !== "tickets" && view !== "bu");
+
+    if (location.hash.replace("#", "") !== view) {
+      try { history.replaceState(null, "", "#" + view); } catch (e) {}
+    }
+
+    updateCommand();
+    if (view === "home") renderHome();
+    else if (view === "tickets") renderTickets();
+    else if (view === "bu") renderBuUpdates();
+    else renderPlatform(view);
+  }
+
+  function rerender() {
+    updateCommand();
+    fillPeriodSelect();
+    if (state.view === "home") renderHome();
+    else if (state.view === "tickets") renderTickets();
+    else if (state.view === "bu") renderBuUpdates();
+    else renderPlatform(state.view);
+  }
+
+  function loadAll() {
+    state.loading = true;
+    showBanner(location.protocol === "file:" ? "Opened as file:// — use http://localhost:8765/platforms-weekly-status.html" : "", location.protocol === "file:" ? "error" : "");
+
+    Promise.all([
+      fetchCsv(GID.exec),
+      fetchCsv(GID.kpis),
+      fetchCsv(GID.tickets),
+      fetchCsv(GID.wow),
+      fetchCsv(GID.dailyDash),
+      loadHourlyFeed(),
+      fetchCsv(GID.monthlyMsgs),
+      fetchCsv(GID.data),
+      loadBuRegions()
+    ]).then(function (texts) {
+      var bundle = parseExecBundle(parseCSV(texts[0]));
+      var wow = parseWowSummary(parseCSV(texts[3]));
+      state.exec = bundle.summary;
+      // Prefer WoW Summary for history — Exec right panel lags behind Reporting Period
+      state.weeks = (wow.weeks && wow.weeks.length) ? wow.weeks : bundle.weeks;
+      state.monthly = parseMonthlyMessages(parseCSV(texts[6]));
+      state.daily = mergeDataTabIntoDaily(
+        parseDailyData(parseCSV(texts[4])),
+        parseDataTab(parseCSV(texts[7]))
+      );
+      var weekMonths = monthsFromWeeks(state.weeks);
+      var monthlyMonths = (state.monthly.months || []).map(function (m) { return m.month; });
+      // Prefer monthly sheet month names for Month mode, keep week-derived months as fallback
+      var monthSeen = {};
+      state.months = [];
+      monthlyMonths.concat(weekMonths).forEach(function (m) {
+        if (!m || m === "Unknown" || monthSeen[m]) return;
+        monthSeen[m] = true;
+        state.months.push(m);
+      });
+      state.kpis = parseKpis(parseCSV(texts[1]));
+      state.tickets = parseTickets(parseCSV(texts[2]));
+      // texts[5] hourly · texts[8] BU regions already applied via loaders
+
+      var ids = state.weeks.map(function (w) { return w.id; });
+      if (!state.selectedWeekId || ids.indexOf(state.selectedWeekId) < 0) {
+        state.selectedWeekId = pickLatestWeekId(state.weeks, state.exec && state.exec.period);
+      }
+      if (!state.selectedMonth && state.months.length) {
+        state.selectedMonth = state.months[0];
+      } else if (state.selectedMonth && state.months.indexOf(state.selectedMonth) < 0) {
+        state.selectedMonth = state.months[0];
+      }
+
+      state.loading = false;
+      state.error = null;
+      showBanner("");
+      rerender();
+      setView(state.view || "home");
+    }).catch(function (e) {
+      state.loading = false;
+      state.error = e && e.message ? e.message : String(e);
+      showBanner("Could not load live sheet (" + state.error + "). Confirm Publish to web, then Refresh.", "error");
+      var hourlyEl = document.getElementById("homeHourly");
+      if (hourlyEl) hourlyEl.innerHTML = '<div class="card"><div class="empty">Failed to load live data</div></div>';
+    });
+  }
+
+  /* —— Events —— */
+  document.getElementById("mainNav").addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-view]");
+    if (!btn) return;
+    setView(btn.getAttribute("data-view"));
+  });
+
+  document.body.addEventListener("click", function (e) {
+    var buFilter = e.target.closest("[data-bu-region]");
+    if (buFilter) {
+      state.buRegionFilter = buFilter.getAttribute("data-bu-region") || "all";
+      renderBuUpdates();
+      return;
+    }
+    var jump = e.target.closest("[data-jump]");
+    if (jump) {
+      setView(jump.getAttribute("data-jump"));
+      return;
+    }
+    var weekRow = e.target.closest("[data-week]");
+    if (weekRow) {
+      state.mode = "week";
+      state.selectedWeekId = weekRow.getAttribute("data-week");
+      document.querySelectorAll("#modeSeg button").forEach(function (b) {
+        b.classList.toggle("active", b.getAttribute("data-mode") === "week");
+      });
+      rerender();
+    }
+  });
+
+  document.getElementById("modeSeg").addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-mode]");
+    if (!btn) return;
+    state.mode = btn.getAttribute("data-mode");
+    document.querySelectorAll("#modeSeg button").forEach(function (b) {
+      b.classList.toggle("active", b === btn);
+    });
+    fillPeriodSelect();
+    rerender();
+  });
+
+  document.getElementById("periodSelect").addEventListener("change", function () {
+    if (state.mode === "week") state.selectedWeekId = this.value;
+    else state.selectedMonth = this.value;
+    updateCommand();
+    if (state.view === "home") renderHome();
+    else if (state.view === "tickets") renderTickets();
+    else renderPlatform(state.view);
+  });
+
+  document.getElementById("btnRefresh").addEventListener("click", function () {
+    this.textContent = "Loading…";
+    var self = this;
+    loadAll();
+    setTimeout(function () { self.textContent = "Refresh"; }, 1200);
+  });
+
+  document.getElementById("btnLatest").addEventListener("click", function () {
+    state.mode = "week";
+    if (state.weeks.length) state.selectedWeekId = state.weeks[state.weeks.length - 1].id;
+    document.querySelectorAll("#modeSeg button").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-mode") === "week");
+    });
+    fillPeriodSelect();
+    setView("home");
+  });
+
+  document.getElementById("btnPrevWeek").addEventListener("click", function () {
+    if (!state.weeks.length) return;
+    var idx = state.weeks.findIndex(function (w) { return w.id === state.selectedWeekId; });
+    if (idx < 0) idx = state.weeks.length - 1;
+    if (idx > 0) {
+      state.selectedWeekId = state.weeks[idx - 1].id;
+      state.mode = "week";
+      rerender();
+    }
+  });
+
+  document.getElementById("btnNextWeek").addEventListener("click", function () {
+    if (!state.weeks.length) return;
+    var idx = state.weeks.findIndex(function (w) { return w.id === state.selectedWeekId; });
+    if (idx < 0) idx = state.weeks.length - 1;
+    if (idx < state.weeks.length - 1) {
+      state.selectedWeekId = state.weeks[idx + 1].id;
+      state.mode = "week";
+      rerender();
+    }
+  });
+
+  document.getElementById("btnOpenTickets").addEventListener("click", function () { setView("tickets"); });
+
+  // hash routing
+  var hash = (location.hash || "#home").replace("#", "");
+  if (["home", "infolink", "boomi", "shipping", "cpi", "bu", "tickets"].indexOf(hash) >= 0) state.view = hash;
+
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem("arx-theme", theme); } catch (e) {}
+    var btn = document.getElementById("btnTheme");
+    if (btn) btn.textContent = theme === "dark" ? "☀" : "☾";
+    if (!state.loading) rerender();
+  }
+  (function initTheme() {
+    var saved = null;
+    try { saved = localStorage.getItem("arx-theme"); } catch (e) {}
+    applyTheme(saved === "dark" ? "dark" : "light");
+  })();
+
+  var themeBtn = document.getElementById("btnTheme");
+  if (themeBtn) themeBtn.addEventListener("click", function () {
+    var cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    applyTheme(cur === "dark" ? "light" : "dark");
+  });
+
+  var legendEl = document.getElementById("homeLegend");
+  if (legendEl) legendEl.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-series]");
+    if (!b || !state.lastSeries) return;
+    var name = b.getAttribute("data-series");
+    state.chartHidden[name] = !state.chartHidden[name];
+    document.getElementById("homeChart").innerHTML = multiLineChart(state.lastSeries);
+    document.getElementById("homeLegend").innerHTML = state.lastSeries.map(function (s) {
+      var off = state.chartHidden[s.name] ? " off" : "";
+      return '<button type="button" class="' + off + '" data-series="' + esc(s.name) + '"><i class="swatch" style="background:' + s.color + '"></i>' + esc(s.name) + "</button>";
+    }).join("");
+    bindChartInteractions(state.lastSeries);
+  });
+
+  loadAll();
+  setInterval(loadAll, 300000);
+  setInterval(function () {
+    if (state.view !== "home") return;
+    loadHourlyFeed().then(function () { renderHomeHourly(); });
+  }, 60000);
+
+  (function initUnveil() {
+    var el = document.getElementById("unveil");
+    if (!el) return;
+    // Always show on load / refresh (no session skip)
+    try { sessionStorage.removeItem("arx-unveil"); } catch (e) {}
+    el.classList.remove("hide");
+    el.style.display = "flex";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    var dismissed = false;
+    function dismiss() {
+      if (dismissed) return;
+      dismissed = true;
+      el.classList.add("hide");
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+      setTimeout(function () { el.style.display = "none"; }, 600);
+    }
+    var skip = document.getElementById("unveilSkip");
+    if (skip) skip.addEventListener("click", dismiss);
+    el.addEventListener("click", function (e) {
+      if (e.target === el) dismiss();
+    });
+    setTimeout(dismiss, 2800);
+  })();
+})();
+</script>
+</body>
+</html>
