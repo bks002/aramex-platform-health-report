@@ -778,9 +778,16 @@
   .bu-region-card table.data td.task { font-weight: 600; min-width: 180px; }
   .bu-region-card table.data td.remarks { color: var(--arx-grey); min-width: 220px; }
   .bu-filter {
-    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center;
+    display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; align-items: center;
   }
   .bu-filter .seg button.active { background: var(--arx-black); color: #fff; }
+  .bu-source {
+    display: inline-flex; align-items: center;
+    padding: 5px 10px; border-radius: 999px;
+    border: 1px solid var(--arx-line); background: var(--metric-bg);
+    color: var(--arx-grey); font-size: 11px; font-weight: 700;
+    white-space: nowrap;
+  }
   @media (max-width: 900px) {
     .bu-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
@@ -1839,7 +1846,7 @@ Sr No,Name,Task,Status,Started Date,End Date,Update Date,Remarks
   function parseBuEmbedded() {
     var text = embeddedBuCsvText();
     var parsed = parseBuRegions(parseCSV(text));
-    parsed.source = "Embedded CSV";
+    parsed.source = "Sample dummy data";
     return parsed;
   }
 
@@ -1978,7 +1985,7 @@ Sr No,Name,Task,Status,Started Date,End Date,Update Date,Remarks
         var active = (state.buRegionFilter || "all") === f.id ? " active" : "";
         return '<button type="button" data-bu-region="' + esc(f.id) + '" class="' + active.trim() + '">' + esc(f.label) + "</button>";
       }).join("") + "</div>" +
-        '<span class="cta" style="margin-left:4px;">' + esc(bu.source || "BU sheet") + "</span>";
+        '<span class="bu-source">' + esc(bu.source || "Sample dummy data") + "</span>";
     }
 
     var selected = state.buRegionFilter || "all";
